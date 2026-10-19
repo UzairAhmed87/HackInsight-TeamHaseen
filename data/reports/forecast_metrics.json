@@ -1,0 +1,237 @@
+{
+  "experiment": "PAQI Karachi daily PM2.5 next-day historical forecast",
+  "source_id": "paqi_karachi_daily_pm25",
+  "source_version": "10.5281/zenodo.15845428",
+  "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf",
+  "generated_at_utc": "2026-10-19T22:14:44Z",
+  "target": "published PAQI Karachi daily PM2.5 series value; not a sensor-specific or citywide exposure estimate",
+  "unit": "µg/m³",
+  "prediction_horizon": "next reported daily series value",
+  "split_boundaries": {
+    "train": {
+      "start": "2016-10-06",
+      "end": "2022-07-12"
+    },
+    "validation": {
+      "start": "2022-07-13",
+      "end": "2023-10-06"
+    },
+    "test": {
+      "start": "2023-10-07",
+      "end": "2024-12-31"
+    }
+  },
+  "baseline": "latest valid PM2.5 observation strictly before target date; input date and age recorded",
+  "model": {
+    "type": "ordinary least squares linear regression with intercept",
+    "features": [
+      "PM2.5 at exact calendar lag 1 day(s)",
+      "PM2.5 at exact calendar lag 2 day(s)",
+      "PM2.5 at exact calendar lag 7 day(s)"
+    ],
+    "missing_lags": "Exclude target from model fitting/evaluation if any exact lag is missing; no imputation.",
+    "training_rows": 2099,
+    "training_dates": {
+      "start": "2016-10-13",
+      "end": "2022-07-12"
+    },
+    "learned_preprocessing": "None; coefficients fit on train dates only.",
+    "test_tuning": "None; model specification fixed before test evaluation."
+  },
+  "metrics": {
+    "primary": "MAE",
+    "secondary": "RMSE",
+    "residual_convention": "actual minus prediction in per-date output"
+  },
+  "splits": {
+    "validation": {
+      "dates": {
+        "start": "2022-07-13",
+        "end": "2023-10-06"
+      },
+      "persistence_all_eligible_targets": {
+        "n": 451,
+        "mae": 10.108425720620843,
+        "rmse": 16.724502385552338
+      },
+      "linear_model": {
+        "n": 451,
+        "mae": 9.819337015927545,
+        "rmse": 15.898988992827183
+      },
+      "persistence_on_model_matched_targets": {
+        "n": 451,
+        "mae": 10.108425720620843,
+        "rmse": 16.724502385552338
+      },
+      "paired_model_minus_persistence": {
+        "n": 451,
+        "mae_difference": -0.28908870469329884,
+        "rmse_difference": -0.8255133927251546
+      },
+      "persistence_input_age_counts": {
+        "immediate_previous_calendar_day": 451,
+        "older_than_previous_calendar_day": 0,
+        "no_prior_valid_reading": 0,
+        "missing_target": 0
+      },
+      "model_complete_lag_target_count": 451,
+      "model_excluded_for_missing_lag_count": 0,
+      "by_target_year": {
+        "2022": {
+          "persistence_all_eligible_targets": {
+            "n": 172,
+            "mae": 10.075581395348838,
+            "rmse": 15.273049679472267
+          },
+          "linear_model": {
+            "n": 172,
+            "mae": 9.947157292412754,
+            "rmse": 14.592786359272298
+          },
+          "persistence_on_model_matched_targets": {
+            "n": 172,
+            "mae": 10.075581395348838,
+            "rmse": 15.273049679472267
+          },
+          "paired_model_minus_persistence": {
+            "n": 172,
+            "mae_difference": -0.12842410293608353,
+            "rmse_difference": -0.6802633201999697
+          }
+        },
+        "2023": {
+          "persistence_all_eligible_targets": {
+            "n": 279,
+            "mae": 10.128673835125449,
+            "rmse": 17.559626019645773
+          },
+          "linear_model": {
+            "n": 279,
+            "mae": 9.740537418954583,
+            "rmse": 16.653275441457513
+          },
+          "persistence_on_model_matched_targets": {
+            "n": 279,
+            "mae": 10.128673835125449,
+            "rmse": 17.559626019645773
+          },
+          "paired_model_minus_persistence": {
+            "n": 279,
+            "mae_difference": -0.388136416170866,
+            "rmse_difference": -0.9063505781882597
+          }
+        }
+      },
+      "empirical_validation_residual_interval": {
+        "source_split": "validation",
+        "validation_residual_count": 451,
+        "residual_quantiles": {
+          "lower_5_percent": -23.79124168656935,
+          "upper_95_percent": 29.53960390388523
+        },
+        "test_coverage": null,
+        "test_hits": null,
+        "test_n": null,
+        "interpretation": "Historical empirical interval from validation residuals; not a guaranteed probabilistic forecast."
+      }
+    },
+    "test": {
+      "dates": {
+        "start": "2023-10-07",
+        "end": "2024-12-31"
+      },
+      "persistence_all_eligible_targets": {
+        "n": 446,
+        "mae": 10.271973094170404,
+        "rmse": 17.347376095510903
+      },
+      "linear_model": {
+        "n": 436,
+        "mae": 9.901176082480134,
+        "rmse": 16.326529977211155
+      },
+      "persistence_on_model_matched_targets": {
+        "n": 436,
+        "mae": 10.150688073394495,
+        "rmse": 16.941869717988165
+      },
+      "paired_model_minus_persistence": {
+        "n": 436,
+        "mae_difference": -0.24951199091436038,
+        "rmse_difference": -0.61533974077701
+      },
+      "persistence_input_age_counts": {
+        "immediate_previous_calendar_day": 444,
+        "older_than_previous_calendar_day": 2,
+        "no_prior_valid_reading": 0,
+        "missing_target": 6
+      },
+      "model_complete_lag_target_count": 436,
+      "model_excluded_for_missing_lag_count": 10,
+      "by_target_year": {
+        "2023": {
+          "persistence_all_eligible_targets": {
+            "n": 80,
+            "mae": 17.145,
+            "rmse": 26.277704427898566
+          },
+          "linear_model": {
+            "n": 72,
+            "mae": 17.157411945094186,
+            "rmse": 25.176772334784552
+          },
+          "persistence_on_model_matched_targets": {
+            "n": 72,
+            "mae": 16.976388888888888,
+            "rmse": 25.330589215413053
+          },
+          "paired_model_minus_persistence": {
+            "n": 72,
+            "mae_difference": 0.1810230562052979,
+            "rmse_difference": -0.15381688062850074
+          }
+        },
+        "2024": {
+          "persistence_all_eligible_targets": {
+            "n": 366,
+            "mae": 8.769672131147543,
+            "rmse": 14.689315287192844
+          },
+          "linear_model": {
+            "n": 364,
+            "mae": 8.46587668108395,
+            "rmse": 13.924798325918253
+          },
+          "persistence_on_model_matched_targets": {
+            "n": 364,
+            "mae": 8.80054945054945,
+            "rmse": 14.726980547415552
+          },
+          "paired_model_minus_persistence": {
+            "n": 364,
+            "mae_difference": -0.3346727694655005,
+            "rmse_difference": -0.8021822214972989
+          }
+        }
+      },
+      "empirical_validation_residual_interval": {
+        "source_split": "validation",
+        "validation_residual_count": 451,
+        "residual_quantiles": {
+          "lower_5_percent": -23.79124168656935,
+          "upper_95_percent": 29.53960390388523
+        },
+        "test_coverage": 0.9151376146788991,
+        "test_hits": 399,
+        "test_n": 436,
+        "interpretation": "Historical empirical interval from validation residuals; not a guaranteed probabilistic forecast."
+      }
+    }
+  },
+  "limitations": [
+    "Historical backtest ends 2024-12-31 and is not a current forecast.",
+    "PAQI station identity, aggregation, precise timezone/window, QA, blank-value meaning, and method history remain undocumented.",
+    "Two-source compliance is not established; only the approved PAQI source is used."
+  ]
+}

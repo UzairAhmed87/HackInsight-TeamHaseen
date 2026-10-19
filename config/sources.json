@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "request_timeout_seconds": 45,
+  "freshness_warning_days": 30,
+  "sources": [
+    {
+      "source_id": "paqi_karachi_daily_pm25",
+      "enabled": true,
+      "publisher": "Pakistan Air Quality Initiative (PAQI)",
+      "title": "Unveiling Karachi's Air: A Scientific Foundation for a Clean Air City",
+      "version": "10.5281/zenodo.15845428",
+      "metadata_url": "https://zenodo.org/api/records/15845428",
+      "source_url": "https://doi.org/10.5281/zenodo.15845428",
+      "download_url": "https://zenodo.org/api/records/15845428/files/PAQI_Daily_PM2.5_Data_2016-2024_in_Karachi.csv/content",
+      "filename": "PAQI_Daily_PM2.5_Data_2016-2024_in_Karachi.csv",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "expected_size_bytes": 51387,
+      "expected_md5": "b3fe95e0550702ed7562687ea2e8a219",
+      "expected_zenodo_license_id": "cc-by-4.0",
+      "expected_header": [
+        "date",
+        "pm25_concentration_ug_per_m3"
+      ],
+      "city": "Karachi",
+      "pollutant": "PM2.5",
+      "unit": "µg/m³",
+      "time_resolution": "daily_24h_average",
+      "timezone": null,
+      "attribution": "Omar Abid, Dawar Hameed Butt, and Mahad Naveed / Pakistan Air Quality Initiative (PAQI), Unveiling Karachi's Air: A Scientific Foundation for a Clean Air City, version DOI 10.5281/zenodo.15845428, CC BY 4.0. Identify changes; do not imply endorsement.",
+      "request_description": "GET pinned Zenodo version metadata; verify licence, exact filename, size and MD5. Then GET the versioned daily CSV only when no checksum-valid cached artifact exists."
+    },
+    {
+      "source_id": "pak_epa_islamabad_reports",
+      "enabled": false,
+      "publisher": "Pakistan Environmental Protection Agency",
+      "source_url": "https://environment.gov.pk/Detail/ZjU5NDM3YjItNTdiOS00NTk5LWExYzUtMjI2NzE5YjdlOGM5",
+      "license": "UNVERIFIED",
+      "request_description": "Excluded: explicit reuse permission, station lineage, measurement methodology, and independence from PAQI/OpenAQ have not been verified."
+    },
+    {
+      "source_id": "openaq_pakistan",
+      "enabled": false,
+      "publisher": "OpenAQ platform; underlying provider varies",
+      "source_url": "https://api.openaq.org/v3/locations?country=PK",
+      "license": "SOURCE_SPECIFIC_UNVERIFIED",
+      "request_description": "Excluded: API key unavailable and Pakistan provider/owner/source licence and PAQI overlap are unverified."
+    }
+  ]
+}

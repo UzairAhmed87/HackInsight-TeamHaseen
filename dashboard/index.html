@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Evidence-grounded historical PM2.5 data and forecast evaluation for the PAQI Karachi series.">
+  <title>HackInsight | Karachi Air Quality</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="HackInsight dashboard home">
+      <span class="brand-mark" aria-hidden="true">HI</span>
+      <span>HackInsight <span class="brand-year">'26</span></span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#history">History</a>
+      <a href="#forecast">Forecast evaluation</a>
+      <a href="#insight">Ask the agent</a>
+    </nav>
+  </header>
+  <main id="main">
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <p class="eyebrow">PAQI · KARACHI · HISTORICAL RESEARCH</p>
+        <h1 id="page-title">Air quality, with its evidence in view.</h1>
+        <p class="hero-lede">Explore the published daily PM2.5 series, audit its limitations, and review a chronological forecast backtest.</p>
+      </div>
+      <aside class="notice" role="note">
+        <span class="notice-icon" aria-hidden="true">!</span>
+        <div><strong>Historical data, not a live air-quality service.</strong><p id="freshness-label">Loading observation freshness…</p></div>
+      </aside>
+    </section>
+
+    <div id="loading" class="state-card" role="status">Loading verified project artifacts…</div>
+    <div id="error" class="state-card error-card" role="alert" hidden></div>
+
+    <div id="dashboard-content" hidden>
+      <section aria-labelledby="overview-heading">
+        <div class="section-heading">
+          <div><p class="eyebrow">01 / SNAPSHOT</p><h2 id="overview-heading">Dataset overview</h2></div>
+          <span id="pipeline-badge" class="status-badge">Pipeline status</span>
+        </div>
+        <div class="metrics-grid">
+          <article class="metric-card"><span class="metric-label">Observation window</span><strong id="date-range" class="metric-value">—</strong><span class="metric-foot">date-only records</span></article>
+          <article class="metric-card"><span class="metric-label">Dated records</span><strong id="dated-count" class="metric-value">—</strong><span class="metric-foot">unique gold rows</span></article>
+          <article class="metric-card"><span class="metric-label">Numeric readings</span><strong id="numeric-count" class="metric-value">—</strong><span class="metric-foot">PM2.5 values</span></article>
+          <article class="metric-card metric-warning"><span class="metric-label">Missing readings</span><strong id="missing-count" class="metric-value">—</strong><span class="metric-foot">left blank; not imputed</span></article>
+        </div>
+        <div class="overview-footer">
+          <div><span class="inline-label">Latest observation</span><strong id="last-observation">—</strong><span id="stale-detail" class="muted"></span></div>
+          <div><span class="inline-label">Last recorded successful pipeline run</span><strong id="last-run">—</strong><span id="run-detail" class="muted"></span></div>
+        </div>
+      </section>
+
+      <section id="history" aria-labelledby="history-heading">
+        <div class="section-heading">
+          <div><p class="eyebrow">02 / OBSERVATIONS</p><h2 id="history-heading">Historical PM2.5</h2></div>
+          <span class="unit-chip">µg/m³</span>
+        </div>
+        <article class="panel chart-panel">
+          <div class="panel-heading"><div><h3>Daily published series</h3><p>Blank source measurements appear as visible breaks, never interpolated values.</p></div></div>
+          <div id="chart-wrap" class="chart-wrap" aria-busy="true"><p class="muted">Preparing chart…</p></div>
+          <div id="chart-caption" class="chart-caption"></div>
+        </article>
+        <div class="section-heading subheading"><div><h3>Year-by-year summary</h3></div></div>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Annual summary of numeric PAQI Karachi PM2.5 readings</caption>
+            <thead><tr><th scope="col">Year</th><th scope="col">Numeric days</th><th scope="col">Missing</th><th scope="col">Mean</th><th scope="col">Median</th><th scope="col">Range</th></tr></thead>
+            <tbody id="yearly-body"><tr><td colspan="6">Loading yearly summaries…</td></tr></tbody>
+          </table>
+        </div>
+        <p class="callout"><strong>Interpretation:</strong> This is the published PAQI Karachi series. Station identity, network aggregation and citywide exposure representativeness are not established.</p>
+      </section>
+
+      <section id="quality" aria-labelledby="quality-heading">
+        <div class="section-heading">
+          <div><p class="eyebrow">03 / TRUST & LIMITATIONS</p><h2 id="quality-heading">Data quality</h2></div>
+          <span id="quality-badge" class="status-badge">Quality status</span>
+        </div>
+        <div class="quality-layout">
+          <article class="panel quality-summary">
+            <h3>Latest audit run</h3>
+            <dl class="detail-list">
+              <div><dt>Run ID</dt><dd id="quality-run-id">—</dd></div>
+              <div><dt>Checked at (UTC)</dt><dd id="quality-run-time">—</dd></div>
+              <div><dt>Count scope</dt><dd id="quality-count-scope">—</dd></div>
+            </dl>
+            <div id="quality-counts" class="quality-counts"></div>
+          </article>
+          <article class="panel">
+            <h3>Warnings and unresolved checks</h3>
+            <ul id="warning-list" class="warning-list"><li>Loading quality checks…</li></ul>
+            <p id="methodology-warning" class="callout"></p>
+            <p id="second-source-warning" class="muted"></p>
+          </article>
+        </div>
+      </section>
+
+      <section id="forecast" aria-labelledby="forecast-heading">
+        <div class="section-heading">
+          <div><p class="eyebrow">04 / HISTORICAL BACKTEST</p><h2 id="forecast-heading">Forecast evaluation</h2></div>
+          <span class="status-badge status-neutral">Not a live forecast</span>
+        </div>
+        <p class="section-intro">Chronological validation and held-out test results from the existing experiment. Lower MAE/RMSE is better; model and persistence comparisons use matched dates.</p>
+        <div id="forecast-cards" class="forecast-grid"></div>
+        <p id="forecast-caveat" class="callout"></p>
+      </section>
+
+      <section id="insight" aria-labelledby="insight-heading">
+        <div class="section-heading">
+          <div><p class="eyebrow">05 / EVIDENCE Q&A</p><h2 id="insight-heading">Ask the Insight Agent</h2></div>
+          <span class="unit-chip">Local · deterministic</span>
+        </div>
+        <div class="agent-layout">
+          <form id="question-form" class="panel question-panel">
+            <label for="question">Ask about the dataset, quality or forecast evaluation</label>
+            <textarea id="question" name="question" maxlength="1000" rows="3" placeholder="How did the model compare with persistence on the test set?" required></textarea>
+            <button id="ask-button" type="submit">Ask with evidence <span aria-hidden="true">→</span></button>
+            <p class="muted">Answers are grounded in local project artifacts. Live conditions and unsupported explanations are not inferred.</p>
+          </form>
+          <article id="answer-panel" class="panel answer-panel" aria-live="polite" aria-busy="false">
+            <p class="empty-answer">Your cited answer will appear here.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="sources" aria-labelledby="sources-heading">
+        <div class="section-heading">
+          <div><p class="eyebrow">06 / PROVENANCE</p><h2 id="sources-heading">Sources & limitations</h2></div>
+        </div>
+        <article class="panel source-panel">
+          <h3 id="source-name">PAQI Karachi daily PM2.5 dataset</h3>
+          <p id="source-publisher"></p>
+          <div class="source-links"><a id="source-link" href="#" target="_blank" rel="noopener noreferrer">Open pinned dataset record ↗</a><a id="license-link" href="#" target="_blank" rel="noopener noreferrer">CC BY 4.0 licence ↗</a></div>
+          <p id="source-license"></p>
+          <p id="attribution" class="attribution"></p>
+          <ul class="limitations-list">
+            <li>The latest observation is historical; fetching a static file does not create fresh measurements.</li>
+            <li>Station identity, aggregation method, exact timezone/window and sensor QA remain unresolved.</li>
+            <li>Independent second-source compliance has not been established.</li>
+            <li>Do not interpret this dashboard as a live monitor or a representative citywide exposure estimate.</li>
+          </ul>
+        </article>
+      </section>
+    </div>
+  </main>
+  <footer><span>HackInsight '26 · Air Quality Intelligence for Pakistan</span><span id="page-generated"></span></footer>
+</body>
+</html>

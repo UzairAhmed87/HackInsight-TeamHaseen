@@ -1,0 +1,29 @@
+# Generated and source data stay local unless a reviewed release policy says otherwise.
+/data/raw/
+/data/cleaned/
+/data/processed/
+/data/manifests/
+/data/quality/
+/data/reports/
+/data/Unveiling-Karachi-Air_PAQI.pdf
+
+# Read-only evidence required by the public dashboard deployment.
+!/data/processed/
+!/data/processed/gold_air_quality.csv
+!/data/quality/
+/data/quality/*
+!/data/quality/quality_report.json
+!/data/reports/
+/data/reports/*
+!/data/reports/execution_status.json
+!/data/reports/forecast_metrics.json
+!/data/reports/forecast_predictions.csv
+
+# Python and local environment files.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example

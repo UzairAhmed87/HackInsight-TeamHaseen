@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: hackinsight-air-quality-pakistan
+    runtime: python
+    plan: free
+    buildCommand: python -m py_compile pipeline/dashboard.py pipeline/insight_agent.py
+    startCommand: python -m pipeline.dashboard --host 0.0.0.0
+    healthCheckPath: /api/dashboard
+    autoDeploy: true
