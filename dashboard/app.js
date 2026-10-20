@@ -253,6 +253,112 @@ function setSafeLink(node, href, label) {
   }
 }
 
+function freshnessClass(state) {
+  if (state === "fresh") return "status-badge";
+  if (state === "delayed") return "status-badge status-warning";
+  return "status-badge status-failure";
+}
+
+function renderLive(live) {
+  const badge = document.getElementById("live-badge");
+  const primaryWrap = document.getElementById("live-primary");
+  const grid = document.getElementById("live-grid");
+  if (!badge || !primaryWrap || !grid) return;
+
+  text("live-disclaimer", live.coverage_disclaimer || "Point sensor readings only.");
+  const available = live.available_pm25_sensor_count || 0;
+  badge.textContent =
+    live.status === "ok"
+      ? `${available} sensor${available === 1 ? "" : "s"} with PM2.5`
+      : "Live feed unavailable";
+  badge.className = live.status === "ok" ? "status-badge" : "status-badge status-warning";
+
+  primaryWrap.replaceChildren();
+  const primary = live.primary_sensor;
+  if (primary && primary.pm25_ug_m3 != null) {
+    const title = element("h3", "", primary.location_name || primary.configured_label || "Primary sensor");
+    const value = element("p", "live-value", `${number(primary.pm25_ug_m3, 1)} µg/m³ PM2.5`);
+    const meta = element(
+      "p",
+      "muted",
+      `Observed ${primary.observation_time_pkt || primary.observation_time_utc || "—"} · fetched ${primary.fetched_at_pkt || primary.fetched_at_utc || "—"} · ${String(primary.freshness || "unavailable")}`,
+    );
+    const area = element("p", "muted", `${primary.area || "Karachi"} · AirGradient id ${primary.location_id}`);
+    const status = element("span", freshnessClass(primary.freshness), String(primary.freshness || "unavailable"));
+    primaryWrap.append(status, title, value, area, meta);
+  } else {
+    primaryWrap.append(
+      element(
+        "p",
+        "muted",
+        live.error
+          ? `Live sensors unavailable: ${live.error}`
+          : "No verified public PM2.5 reading is available right now. Historical evidence below remains usable.",
+      ),
+    );
+  }
+
+  grid.replaceChildren();
+  (live.sensors || []).forEach((sensor) => {
+    const card = element("article", "panel live-card");
+    card.append(element("span", freshnessClass(sensor.freshness), String(sensor.freshness || "unavailable")));
+    card.append(element("h3", "", sensor.location_name || sensor.configured_label || `Sensor ${sensor.location_id}`));
+    card.append(
+      element(
+        "p",
+        "live-card-value",
+        sensor.pm25_ug_m3 == null ? "PM2.5 unavailable" : `${number(sensor.pm25_ug_m3, 1)} µg/m³`,
+      ),
+    );
+    const extras = [];
+    if (sensor.temperature_c != null) extras.push(`Temp ${number(sensor.temperature_c, 1)} °C`);
+    if (sensor.relative_humidity_pct != null) extras.push(`RH ${number(sensor.relative_humidity_pct, 0)}%`);
+    if (sensor.pm1_ug_m3 != null) extras.push(`PM1 ${number(sensor.pm1_ug_m3, 1)}`);
+    card.append(element("p", "muted", extras.join(" · ") || sensor.area || ""));
+    card.append(
+      element(
+        "p",
+        "muted",
+        sensor.error
+          ? `Fetch issue: ${sensor.error}`
+          : `Observed ${sensor.observation_time_pkt || "—"}`,
+      ),
+    );
+    grid.append(card);
+  });
+
+  const orangi = (live.unavailable_targets || [])
+    .map((item) => `${item.label}: ${item.status}. ${item.notes || ""}`)
+    .join(" ");
+  text("live-orangi-note", orangi);
+  text(
+    "live-attribution",
+    live.provider
+      ? `${live.provider.attribution || ""} ${live.provider.license_note || ""}`.trim()
+      : "",
+  );
+}
+
+function renderHealth(health) {
+  if (!health) return;
+  text("health-title", health.title || "Understanding PM2.5");
+  text("health-summary", health.summary || "");
+  text("health-caveat", health.caveat || "");
+  text("health-reference", health.reference || "");
+}
+
+function renderHowItWorks(steps) {
+  const list = document.getElementById("how-it-works");
+  if (!list) return;
+  list.replaceChildren();
+  (steps || []).forEach((step, index) => {
+    const item = element("li", "");
+    item.append(element("strong", "", `${index + 1}.`));
+    item.append(document.createTextNode(` ${step}`));
+    list.append(item);
+  });
+}
+
 function renderDashboard(data) {
   const overview = data.overview;
   text("date-range", `${overview.start_date} – ${overview.end_date}`);
@@ -263,13 +369,13 @@ function renderDashboard(data) {
   const freshness = overview.freshness;
   text(
     "freshness-label",
-    `Last observation ${freshness.last_observation_date} · ${integer(freshness.age_days)} days old. Historical data only.`,
+    `Historical last observation ${freshness.last_observation_date} · ${integer(freshness.age_days)} days old. Live sensors are a separate feed below.`,
   );
   text(
     "stale-detail",
     freshness.is_stale
-      ? `Stale: exceeds the ${freshness.warning_threshold_days}-day warning threshold.`
-      : `Within the ${freshness.warning_threshold_days}-day warning threshold.`,
+      ? `Historical series exceeds the ${freshness.warning_threshold_days}-day warning threshold.`
+      : `Historical series within the ${freshness.warning_threshold_days}-day warning threshold.`,
   );
   const pipeline = overview.pipeline;
   setStatusBadge(document.getElementById("pipeline-badge"), pipeline.latest_status);
@@ -281,6 +387,7 @@ function renderDashboard(data) {
       : "No prior successful run is separately persisted",
   );
   text("run-detail", `${pipeline.success_history_note} Latest run ID: ${pipeline.latest_run_id || "unavailable"}.`);
+  renderLive(data.live || { status: "unavailable", sensors: [] });
   renderChart(data.historical.series, data.historical.unit);
   const missingDates = data.historical.missing_dates || [];
   text(
@@ -290,6 +397,8 @@ function renderDashboard(data) {
   renderYearTable(data.historical.yearly_summary || []);
   renderQuality(data.quality);
   renderForecast(data.forecast);
+  renderHealth(data.health_guidance);
+  renderHowItWorks(data.how_it_works);
   text("source-name", data.source.name || "PAQI Karachi daily PM2.5 dataset");
   text("source-publisher", data.source.publisher);
   setSafeLink(document.getElementById("source-link"), data.source.url, "Open pinned dataset record ↗");
@@ -348,12 +457,12 @@ async function loadDashboard() {
   }
 }
 
-document.getElementById("question-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
+async function askQuestion(question) {
   const button = document.getElementById("ask-button");
   const panel = document.getElementById("answer-panel");
-  const question = document.getElementById("question").value.trim();
+  const field = document.getElementById("question");
   if (!question) return;
+  field.value = question;
   button.disabled = true;
   button.textContent = "Retrieving evidence…";
   panel.setAttribute("aria-busy", "true");
@@ -374,6 +483,18 @@ document.getElementById("question-form").addEventListener("submit", async (event
     button.innerHTML = 'Ask with evidence <span aria-hidden="true">→</span>';
     panel.setAttribute("aria-busy", "false");
   }
+}
+
+document.getElementById("question-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await askQuestion(document.getElementById("question").value.trim());
+});
+
+document.querySelectorAll(".chip-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    const question = button.getAttribute("data-question");
+    if (question) askQuestion(question);
+  });
 });
 
 loadDashboard();

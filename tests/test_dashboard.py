@@ -19,6 +19,14 @@ class DashboardPayloadTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = dashboard.ROOT
         self.now = datetime(2026, 10, 20, 0, 0, tzinfo=timezone.utc)
+        self._previous_live_flag = os.environ.get("HACKINSIGHT_DISABLE_LIVE")
+        os.environ["HACKINSIGHT_DISABLE_LIVE"] = "1"
+
+    def tearDown(self) -> None:
+        if self._previous_live_flag is None:
+            os.environ.pop("HACKINSIGHT_DISABLE_LIVE", None)
+        else:
+            os.environ["HACKINSIGHT_DISABLE_LIVE"] = self._previous_live_flag
 
     def test_payload_exposes_actual_records_missingness_and_staleness(self) -> None:
         payload = dashboard.build_dashboard_payload(self.root, now=self.now)
@@ -31,6 +39,10 @@ class DashboardPayloadTests(unittest.TestCase):
         self.assertTrue(overview["freshness"]["is_stale"])
         self.assertGreater(overview["freshness"]["age_days"], 30)
         self.assertTrue(all(row["value"] is None for row in payload["historical"]["series"] if row["date"] in payload["historical"]["missing_dates"]))
+        self.assertIn("live", payload)
+        self.assertEqual(payload["live"]["status"], "unavailable")
+        self.assertIn("health_guidance", payload)
+        self.assertTrue(payload["how_it_works"])
 
     def test_payload_uses_current_run_quality_counts_and_unresolved_statuses(self) -> None:
         payload = dashboard.build_dashboard_payload(self.root, now=self.now)
@@ -74,6 +86,8 @@ class DashboardPayloadTests(unittest.TestCase):
 class DashboardHTTPTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        cls._previous_live_flag = os.environ.get("HACKINSIGHT_DISABLE_LIVE")
+        os.environ["HACKINSIGHT_DISABLE_LIVE"] = "1"
         cls.server = HTTPServer(("127.0.0.1", 0), dashboard.make_handler(dashboard.ROOT))
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
@@ -84,17 +98,28 @@ class DashboardHTTPTests(unittest.TestCase):
         cls.server.shutdown()
         cls.server.server_close()
         cls.thread.join(timeout=5)
+        if cls._previous_live_flag is None:
+            os.environ.pop("HACKINSIGHT_DISABLE_LIVE", None)
+        else:
+            os.environ["HACKINSIGHT_DISABLE_LIVE"] = cls._previous_live_flag
 
     def test_dashboard_page_and_data_api_are_served(self) -> None:
         with urlopen(f"{self.base_url}/", timeout=5) as response:
             page = response.read().decode("utf-8")
             self.assertEqual(response.status, 200)
-            self.assertIn("Historical data, not a live air-quality service", page)
+            self.assertIn("Historical and live layers are separate", page)
+            self.assertIn("LIVE SENSOR MONITORING", page)
+            self.assertIn("Public neighbourhood sensors", page)
             self.assertEqual(response.headers["Content-Security-Policy"].split(";")[0], "default-src 'self'")
         with urlopen(f"{self.base_url}/api/dashboard", timeout=5) as response:
             payload = json.loads(response.read())
             self.assertEqual(response.status, 200)
             self.assertEqual(payload["overview"]["missing_readings"], 6)
+            self.assertIn("live", payload)
+        with urlopen(f"{self.base_url}/api/live", timeout=5) as response:
+            live = json.loads(response.read())
+            self.assertEqual(response.status, 200)
+            self.assertEqual(live["status"], "unavailable")
 
     def test_question_api_returns_existing_insight_agent_evidence(self) -> None:
         request = Request(

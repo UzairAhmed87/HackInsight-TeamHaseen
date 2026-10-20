@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from pipeline import insight_agent
+from pipeline import live_sensors
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +25,40 @@ SOURCE_REGISTER_RELATIVE = Path("docs/source_register.csv")
 MAX_QUESTION_BYTES = 4096
 SUCCESS_STATUSES = {"success", "success_with_warnings"}
 LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/"
+
+
+def _live_snapshot(root: Path, *, now: datetime) -> dict[str, Any]:
+    """Best-effort live block; never fails the historical dashboard."""
+    try:
+        return live_sensors.fetch_live_snapshot(root, now=now, use_cache=True)
+    except live_sensors.LiveSensorError as exc:
+        return {
+            "status": "unavailable",
+            "error": str(exc),
+            "sensors": [],
+            "primary_sensor": None,
+            "available_pm25_sensor_count": 0,
+            "coverage_disclaimer": (
+                "Live sensor configuration could not be loaded. Historical dashboard remains available."
+            ),
+            "unavailable_targets": [],
+            "notes": [str(exc)],
+            "generated_at_utc": now.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        }
+    except Exception as exc:  # noqa: BLE001 - dashboard must stay up
+        return {
+            "status": "unavailable",
+            "error": f"{type(exc).__name__}: live fetch failed",
+            "sensors": [],
+            "primary_sensor": None,
+            "available_pm25_sensor_count": 0,
+            "coverage_disclaimer": (
+                "Live upstream request failed. Historical PAQI evidence remains available."
+            ),
+            "unavailable_targets": [],
+            "notes": [f"{type(exc).__name__}: {exc}"],
+            "generated_at_utc": now.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        }
 
 
 class DashboardDataError(Exception):
@@ -249,6 +284,29 @@ def build_dashboard_payload(
                 "Identify modifications; do not imply endorsement."
             ),
         },
+        "live": _live_snapshot(root, now=now),
+        "health_guidance": {
+            "title": "Understanding PM2.5",
+            "summary": (
+                "PM2.5 is particulate matter with diameter ≤2.5 micrometres. Elevated outdoor "
+                "concentrations are associated with respiratory and cardiovascular risk in population studies."
+            ),
+            "caveat": (
+                "This dashboard does not diagnose individuals or issue medical advice. "
+                "An instantaneous or short-window sensor reading is not the same as a 24-hour mean "
+                "used in many air-quality standards. For emergencies, follow official Pakistan guidance "
+                "and local health services."
+            ),
+            "reference": "WHO global air-quality guidelines (2021) discuss health evidence for PM2.5; local regulations may differ.",
+        },
+        "how_it_works": [
+            "Acquire published historical PAQI Karachi daily PM2.5 from a pinned Zenodo record with checksum verification.",
+            "Validate and organize measurements into raw, cleaned and gold layers without inventing values.",
+            "Describe historical patterns and missingness from the gold table only.",
+            "Evaluate next-day forecasting on chronological train/validation/test splits versus persistence.",
+            "Answer evidence-grounded questions locally; abstain when evidence is insufficient.",
+            "Optionally fetch public AirGradient point sensors for live neighbourhood readings — never as a citywide AQI.",
+        ],
     }
 
 
@@ -297,6 +355,12 @@ def make_handler(root: Path = ROOT) -> type[BaseHTTPRequestHandler]:
                         {"error": "Dashboard evidence is unavailable. Please try again later."},
                     )
                     return
+                _send_json(self, 200, payload)
+                return
+            if route == "/api/live":
+                now = datetime.now(timezone.utc)
+                payload = _live_snapshot(root, now=now)
+                # Always 200 with explicit status so the historical UI never hard-fails on live outages.
                 _send_json(self, 200, payload)
                 return
             assets = {

@@ -1,8 +1,19 @@
 # HackInsight '26 — Air Quality Intelligence for Pakistan
 
+Evidence-grounded historical PAQI Karachi PM2.5 research **plus** optional public AirGradient neighbourhood live sensors.
+
+Live demo: https://hackinsight-air-quality-pakistan.onrender.com/
+
+## What the dashboard shows
+
+- **Historical PAQI gold table** (2016-10-06 → 2024-12-31): coverage, missingness, charts, quality audit.
+- **Live Sensor Monitoring**: public AirGradient outdoor locations (The Urban Unit) for Karachi neighbourhoods. Point readings only — **not** citywide AQI. Orangi Pilot Project is documented as unavailable on the public API until verified.
+- **Forecast evaluation**: chronological backtest vs persistence (not a live forecast).
+- **Insight Agent**: deterministic, evidence-cited answers; abstains on citywide “current Karachi air quality”.
+
 ## Phase 2 data pipeline
 
-This repository implements a reproducible **single-source PAQI data pipeline**. Phase 1 verified PAQI's versioned Karachi PM2.5 dataset and CC BY 4.0 licence. Pakistan EPA report reuse rights and source lineage remain unresolved; OpenAQ requires an API key and its Pakistan provider/licence/overlap are unverified. Neither is downloaded or merged by this pipeline. Do not claim that the two-source requirement is met.
+This repository implements a reproducible **PAQI historical data pipeline**. Phase 1 verified PAQI's versioned Karachi PM2.5 dataset and CC BY 4.0 licence. Independent two-source warehouse compliance for competition dataset rules is still tracked separately and must not be claimed solely because live sensors exist. OpenAQ still requires an API key for authenticated discovery.
 
 ### Run
 

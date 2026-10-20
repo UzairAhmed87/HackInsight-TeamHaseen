@@ -13,7 +13,7 @@
   --red: #a53837;
   --red-bg: #fff0ed;
   --shadow: 0 14px 40px rgba(29, 66, 59, 0.07);
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -127,6 +127,17 @@ button:disabled { opacity: .62; cursor: wait; }
 footer { display: flex; justify-content: space-between; gap: 20px; padding: 25px max(5vw, calc((100vw - 1120px) / 2)); border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem; }
 .state-card { margin: 20px 0 70px; padding: 30px; border: 1px solid var(--line); border-radius: 14px; background: white; color: var(--muted); text-align: center; }
 .error-card { border-color: #e8b9b5; background: var(--red-bg); color: var(--red); }
+.live-primary { margin-bottom: 14px; }
+.live-value { margin: 8px 0; font-size: clamp(2rem, 4vw, 2.8rem); letter-spacing: -.04em; font-weight: 750; color: var(--teal-dark); }
+.live-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.live-card { min-height: 150px; }
+.live-card-value { margin: 8px 0; font-size: 1.35rem; font-weight: 700; letter-spacing: -.03em; }
+.example-questions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.chip-button { width: auto; margin: 0; padding: 8px 12px; border-radius: 999px; background: #e7f3ee; color: var(--teal-dark); font-size: .78rem; font-weight: 700; }
+.chip-button:hover { background: #d5ebe3; }
+.method-list { margin: 0; padding: 0 0 0 22px; display: grid; gap: 10px; }
+.method-list li { padding: 12px 14px; border-radius: 12px; background: white; border: 1px solid var(--line); list-style: decimal; list-style-position: outside; font-size: .9rem; }
+.health-panel { background: linear-gradient(180deg, #ffffff 0%, #f3faf7 100%); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 [hidden] { display: none !important; }
 
@@ -138,7 +149,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 25px
   .hero { grid-template-columns: 1fr; gap: 24px; padding: 52px 0 36px; }
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
   .quality-layout, .agent-layout { grid-template-columns: 1fr; }
-  .forecast-grid { grid-template-columns: 1fr; }
+  .forecast-grid, .live-grid { grid-template-columns: 1fr; }
   .overview-footer { flex-direction: column; gap: 15px; }
   section { margin-bottom: 48px; }
 }

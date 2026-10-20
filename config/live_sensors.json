@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "provider": {
+    "name": "AirGradient public world API",
+    "publisher": "AirGradient; public contributor The Urban Unit (Pakistan)",
+    "base_url": "https://api.airgradient.com/public/api/v1",
+    "docs_url": "https://api.airgradient.com/public/docs/api/v1/swagger.json",
+    "attribution": "Live outdoor readings from AirGradient public locations contributed by The Urban Unit. Point measurements only — not a Karachi citywide average. Identify modifications; do not imply endorsement.",
+    "license_note": "Public world locations endpoint requires no API token. Attribute AirGradient and The Urban Unit. OpenAQ may mirror the same hardware under CC BY 4.0; this dashboard uses AirGradient as the primary live feed to avoid double-counting."
+  },
+  "request_timeout_seconds": 12,
+  "cache_ttl_seconds": 90,
+  "freshness": {
+    "fresh_max_age_minutes": 30,
+    "stale_max_age_minutes": 360
+  },
+  "display_timezone": "Asia/Karachi",
+  "coverage_disclaimer": "Each card is one outdoor sensor neighbourhood reading. It does not represent all of Karachi or Pakistan.",
+  "unavailable_targets": [
+    {
+      "label": "Orangi Pilot Project",
+      "status": "unavailable_on_public_api",
+      "notes": "AQICN lists Orangi Pilot Project / Urban Unit id 162802, but AirGradient public world API returned HTTP 404 for that id and zero name matches for 'Orangi' at Stage A audit (2026-10-20). Do not fabricate Orangi readings.",
+      "reference_url": "https://aqicn.org/station/validation/@545503/"
+    }
+  ],
+  "sensors": [
+    {
+      "location_id": 162753,
+      "label": "Asif Gulistan-e-Johar",
+      "area": "Gulistan-e-Johar, Karachi",
+      "enabled": true,
+      "primary": true
+    },
+    {
+      "location_id": 162364,
+      "label": "Climate Action Center",
+      "area": "Karachi",
+      "enabled": true,
+      "primary": false
+    },
+    {
+      "location_id": 162379,
+      "label": "Urban Resource Center",
+      "area": "Karachi",
+      "enabled": true,
+      "primary": false
+    },
+    {
+      "location_id": 162732,
+      "label": "NED Main Campus",
+      "area": "Karachi",
+      "enabled": true,
+      "primary": false
+    },
+    {
+      "location_id": 162762,
+      "label": "Askari 5, Malir Cantonment",
+      "area": "Karachi",
+      "enabled": true,
+      "primary": false
+    },
+    {
+      "location_id": 206703,
+      "label": "Maqsood Memon Clifton",
+      "area": "Clifton, Karachi",
+      "enabled": true,
+      "primary": false
+    },
+    {
+      "location_id": 162672,
+      "label": "Aga Khan University Main Campus",
+      "area": "Karachi",
+      "enabled": true,
+      "primary": false
+    }
+  ]
+}

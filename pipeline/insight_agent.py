@@ -153,6 +153,32 @@ def _contains_any(text: str, *terms: str) -> bool:
 
 def _classify(question: str) -> str:
     text = " ".join(question.lower().split())
+    citywide_live = _contains_any(
+        text,
+        "current air quality in karachi",
+        "karachi air quality now",
+        "air quality in karachi",
+        "citywide",
+        "whole city",
+        "all of karachi",
+    )
+    sensor_live = _contains_any(
+        text,
+        "live sensor",
+        "latest live",
+        "sensor pm2.5",
+        "sensor reading",
+        "gulistan",
+        "airgradient",
+        "urban unit sensor",
+        "orangi",
+        "neighbourhood sensor",
+        "neighborhood sensor",
+    )
+    if citywide_live:
+        return "live"
+    if sensor_live:
+        return "live_sensor"
     if re.search(r"\b(now|currently|today|live|real[ -]?time)\b", text):
         return "live"
     if _contains_any(
@@ -252,13 +278,72 @@ def _answer(
     status = "answered"
     answer = ABSTENTION
 
-    if route in {"live", "causal"}:
+    if route == "live_sensor":
+        from pipeline import live_sensors
+
+        snapshot = live_sensors.fetch_live_snapshot(root, now=now or datetime.now(timezone.utc), use_cache=True)
+        primary = snapshot.get("primary_sensor") or {}
+        if snapshot.get("status") == "ok" and primary.get("pm25_ug_m3") is not None:
+            answer = (
+                f"The primary public live sensor '{primary.get('location_name')}' "
+                f"(AirGradient location {primary.get('location_id')}) most recently reported "
+                f"PM2.5 = {primary.get('pm25_ug_m3')} µg/m³ at {primary.get('observation_time_pkt') or primary.get('observation_time_utc')} "
+                f"(freshness: {primary.get('freshness')}). "
+                "This is a neighbourhood point reading, not a Karachi citywide air-quality index."
+            )
+            status = "answered"
+            data_as_of = primary.get("observation_time_utc") or data_as_of
+            evidence.append(
+                {
+                    "kind": "live_sensor_snapshot",
+                    "source_file": live_sensors.CONFIG_RELATIVE.as_posix(),
+                    "locator": f"location_id={primary.get('location_id')}",
+                    "values": {
+                        "pm25_ug_m3": primary.get("pm25_ug_m3"),
+                        "freshness": primary.get("freshness"),
+                        "observation_time_utc": primary.get("observation_time_utc"),
+                        "fetched_at_utc": primary.get("fetched_at_utc"),
+                        "source_endpoint": primary.get("source_endpoint"),
+                    },
+                }
+            )
+            limitations.extend(
+                [
+                    "Live AirGradient readings are separate from the PAQI historical gold table.",
+                    "One sensor does not represent all of Karachi.",
+                    snapshot.get("coverage_disclaimer") or "",
+                ]
+            )
+            limitations = [item for item in limitations if item]
+        else:
+            answer = (
+                f"{ABSTENTION} No verified public live PM2.5 reading is available right now "
+                f"(live status: {snapshot.get('status')}). "
+                f"The historical PAQI series still ends on {data_as_of}."
+            )
+            status = "abstained"
+            evidence.append(
+                {
+                    "kind": "live_sensor_snapshot",
+                    "source_file": live_sensors.CONFIG_RELATIVE.as_posix(),
+                    "locator": "$.status",
+                    "values": {
+                        "status": snapshot.get("status"),
+                        "available_pm25_sensor_count": snapshot.get("available_pm25_sensor_count"),
+                        "unavailable_targets": snapshot.get("unavailable_targets"),
+                    },
+                }
+            )
+            limitations.append("Live upstream outages or missing PM2.5 values produce an unavailable state, not a fabricated reading.")
+    elif route in {"live", "causal"}:
         if route == "live":
             answer = (
                 f"{ABSTENTION} The available PAQI series ends on {data_as_of}; "
-                "it cannot establish current or real-time air quality."
+                "it cannot establish current or real-time citywide air quality. "
+                "Public neighbourhood sensors, when available, are point readings only and are not a Karachi-wide index."
             )
             limitations.append("Historical measurements are not a live monitoring feed or health-warning service.")
+            limitations.append("Ask specifically about a live sensor reading if you want the public AirGradient point feed.")
         else:
             answer = (
                 f"{ABSTENTION} The data can describe recorded PM2.5 values over time, "
