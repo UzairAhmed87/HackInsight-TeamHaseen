@@ -6,7 +6,6 @@
 /data/quality/
 /data/reports/
 /data/Unveiling-Karachi-Air_PAQI.pdf
-
 # Read-only evidence required by the public dashboard deployment.
 !/data/processed/
 !/data/processed/gold_air_quality.csv
