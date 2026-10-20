@@ -156,7 +156,7 @@ Tests use synthetic values only in isolated software fixtures. They do not creat
 
 ## Evidence-grounded Insight Agent
 
-The local Insight Agent answers supported questions from the existing gold table, latest quality report, pinned source register and forecast metrics/predictions. It is a deterministic question router with structured evidence retrieval, not an LLM. It makes no network requests and requires no credentials.
+The local Insight Agent answers supported questions from the existing gold table, latest quality report, pinned source register and forecast metrics/predictions. It is a deterministic question router with structured evidence retrieval, not an LLM. Historical/quality/forecast answers use only local artifacts and need no credentials. Questions that specifically ask for a **live sensor** reading may call the public AirGradient world API (no API key) through `pipeline/live_sensors.py`; set `HACKINSIGHT_DISABLE_LIVE=1` to force an offline unavailable state.
 
 From the repository root, ask a question in readable text:
 
@@ -170,11 +170,11 @@ Use `--format json` (or `--json`) to print the complete structured response:
 python -m pipeline.insight_agent "How many PM2.5 readings are missing?" --format json
 ```
 
-Each response contains `answer`, `status`, evidence file locators and relevant gold row IDs or date ranges, limitations, `generated_at`, and `data_as_of` (the latest observation date, not the answer time). Numeric summaries are calculated from the gold table at query time. Forecast claims use the machine-readable test split metrics and are cross-checked against the scored prediction rows. Questions about live conditions and unsupported causal claims abstain; methodology questions identify what is known and what remains undocumented. The agent does not establish two-source compliance, citywide representativeness, sensor identity, or a live-warning capability.
+Each response contains `answer`, `status`, evidence file locators and relevant gold row IDs or date ranges, limitations, `generated_at`, and `data_as_of` (latest historical observation date for gold-backed answers, or the live observation timestamp when answering a live-sensor question). Numeric summaries are calculated from the gold table at query time. Forecast claims use the machine-readable test split metrics and are cross-checked against the scored prediction rows. Citywide “current Karachi air quality” and unsupported causal claims abstain; explicit live-sensor questions may report a neighbourhood point reading with freshness and attribution, never a citywide index. Methodology questions identify what is known and what remains undocumented. The agent does not establish two-source compliance or a health-warning service.
 
 ## Air Quality Intelligence dashboard
 
-The dashboard uses only Python's standard library on the backend and local HTML/CSS/JavaScript assets on the frontend; no package installation, paid API, browser data API or network calls to a chart service are required. It serves the gold series, quality report, latest execution status, forecast artifacts and source register without changing them.
+The dashboard uses only Python's standard library on the backend and local HTML/CSS/JavaScript assets on the frontend; no package installation, paid API, or browser chart CDN is required. It serves the gold series, quality report, latest execution status, forecast artifacts and source register without changing them. The optional live panel and `/api/live` endpoint fetch public AirGradient current measures server-side (not from browser JavaScript).
 
 Run locally from the repository root on Windows:
 
