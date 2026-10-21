@@ -27,12 +27,12 @@
 <h2>Problem and primary user</h2>
 <p>Karachi residents, and the school heads, clinic staff and journalists who advise them, see PM2.5 numbers with no source, no quality check and no admission of uncertainty. We built a traceable, reproducible warehouse and agents that explain it without inventing anything.</p>
 
-<h2>Dataset: 115,146 gold rows from three original publishers, rebuilt with <code>make data</code></h2>
+<h2>Dataset: 115,211 gold rows from three original publishers, rebuilt with <code>make data</code></h2>
 <table>
 <tr><th>Source (publisher)</th><th>Access / licence</th><th>Rows</th><th>Coverage</th></tr>
 <tr><td>PAQI Karachi daily PM2.5 (Pakistan Air Quality Initiative)</td><td>Zenodo DOI 10.5281/zenodo.15845428 · CC BY 4.0</td><td>3,009 days</td><td>2016-10-06 → 2024-12-31</td></tr>
 <tr><td>U.S. Consulate General Karachi monitor (U.S. Dept. of State / EPA AirNow)</td><td>OpenAQ location 8156 · US Public Domain</td><td>46,937 hours</td><td>2019-05-22 → 2025-03-04</td></tr>
-<tr><td>Urban Unit AirGradient network, 8 sensors (The Urban Unit)</td><td>OpenAQ v3 hourly · CC BY 4.0</td><td>65,200 hours</td><td>2025-06-19 → refreshed hourly</td></tr>
+<tr><td>Urban Unit AirGradient network, 8 sensors (The Urban Unit)</td><td>OpenAQ v3 hourly · CC BY 4.0</td><td>65,265 hours</td><td>2025-06-19 → refreshed hourly</td></tr>
 </table>
 <p>The raw files are kept verbatim and never overwritten, each with a SHA-256 provenance sidecar. Every gold row has a stable SHA-256 <code>row_id</code> and the hash of its raw file. Licence and provider are re-read from source metadata on every run. <b>Cross-source check:</b> on 1,399 shared days, PAQI vs Consulate Pearson r = 0.87, mean difference +3.43 µg/m³; 63 days are flagged for large disagreement. PAQI does not publish its monitor set, so we report agreement instead of assuming independence. No synthetic or personal data is used.</p>
 
@@ -62,7 +62,7 @@
 <p>A deterministic router retrieves evidence from the gold tables and reports, and computes every number at query time. It returns cited evidence (file, locator, row IDs), limitations and <code>data_as_of</code>. It says <i>"I don't know based on the available evidence"</i> for causal, off-topic or unsupported questions, and for "current air" it gives the latest sensor hour but refuses a citywide index. An optional LLM (Gemini/Groq) rewrites the verified answer in English or Urdu with [E#] citations. Code discards any output containing a number not in the evidence, a missing abstention or a fake citation.</p>
 
 <h2>Automation and dashboard</h2>
-<p>GitHub Actions runs every hour: unit tests (81), then the Prefect flow (warehouse + quality agents, then forecast). It commits refreshed artifacts and <code>prefect_runs.csv</code>, which Prefect state hooks write with one row per run, including failures. The Render dashboard and the Hugging Face Space show per-source freshness, quality status, the last successful run, cross-source agreement, forecast evaluation and the agent.</p>
+<p>GitHub Actions runs every hour: unit tests (87), then the Prefect flow (warehouse + quality agents, then forecast). It commits refreshed artifacts and <code>prefect_runs.csv</code>, which Prefect state hooks write with one row per run, including failures. The Render dashboard shows per-source freshness, quality status, the last successful run, cross-source agreement, forecast evaluation and the agent.</p>
 
 <h2>Limitations</h2>
 <p>PAQI's monitor set, day boundary and QA are undocumented. The Consulate monitor stopped in March 2025. Urban Unit sensors are uncorrected low-cost sensors, and their median is not a citywide or regulatory value. The forecast is a historical backtest. This is not medical advice. AI use is documented in AI_Use_Log.md.</p>
