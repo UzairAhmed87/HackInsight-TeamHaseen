@@ -1,11 +1,11 @@
 {
-  "generated_at_utc": "2026-10-21T19:21:24Z",
-  "run_id": "20261021T192124.785677Z",
+  "generated_at_utc": "2026-10-21T23:20:55Z",
+  "run_id": "20261021T232055.440432Z",
   "status": "success_with_warnings",
   "two_source_compliance": "established",
-  "total_gold_rows": 115231,
-  "latest_observation_utc": "2026-10-21T19:00:00Z",
-  "latest_observation_age_hours": 0.4,
+  "total_gold_rows": 115246,
+  "latest_observation_utc": "2026-10-21T22:00:00Z",
+  "latest_observation_age_hours": 1.3,
   "sources": [
     {
       "source_id": "paqi_karachi_daily_pm25",
@@ -36,11 +36,11 @@
       "access": "https://explore.openaq.org/",
       "license": "CC BY 4.0",
       "resolution": "hourly, 8 sensors (daily means derived)",
-      "gold_rows": 65285,
-      "daily_gold_rows": 2934,
+      "gold_rows": 65300,
+      "daily_gold_rows": 2939,
       "status": "success_with_warnings",
-      "latest_observation": "2026-10-21T19:00:00Z",
-      "latest_age_hours": 0.4,
+      "latest_observation": "2026-10-21T22:00:00Z",
+      "latest_age_hours": 1.3,
       "quality_report": "data/quality/urban_unit_quality_report.json"
     }
   ],
