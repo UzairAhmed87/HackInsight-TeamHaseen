@@ -31,7 +31,7 @@
   - [x] Multiple FLAG events (gaps, staleness, methodology)
 
 ### 3. Model ✅
-- [x] **Beats baseline** (linear 15.4 vs persistence 18.2 MAE)
+- [x] **Beats baseline** (linear 9.90 vs persistence 10.15 test MAE)
 - [x] **Pre-declared baseline** (persistence documented)
 - [x] **Time-based splits** (train/val/test chronological)
   - [x] Train: 2016-10-06 to 2022-07-12
@@ -237,7 +237,7 @@ HackInsight-TeamHaseen/
 A: 15+ deterministic validation rules. Every decision (fix/fill/flag) is logged with reason, timestamp, and row ID. No silent corrections. No invented values.
 
 **Q: Why linear regression instead of deep learning?**
-A: Interpretability and reproducibility. With only 3,009 samples, deep learning would overfit. Our linear model beats the baseline by 15.4% with full transparency.
+A: Interpretability and reproducibility. With only 3,009 samples, deep learning would overfit. Our linear model beats persistence on the test split (MAE 9.90 vs 10.15) with full transparency.
 
 **Q: How do you prevent hallucinations in the Insight Agent?**
 A: Deterministic routing. Every answer cites file paths, date ranges, or row IDs. If data doesn't support the question, it says "I don't know." No LLM generation of numbers.

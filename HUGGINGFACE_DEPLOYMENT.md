@@ -165,7 +165,7 @@ chmod +x deploy_to_hf.sh
 ## 🔧 Troubleshooting
 
 ### Build Fails with "Module not found"
-**Fix:** Check `requirements.txt` includes `gradio==4.44.0`
+**Fix:** Check `requirements.txt` includes `gradio==5.50.0`
 
 ### Agent Returns "Data not available"
 **Fix:** Ensure data files copied to correct paths:

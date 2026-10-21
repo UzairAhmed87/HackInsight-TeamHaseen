@@ -76,7 +76,7 @@ git push
 ### Tab 3: 📖 About
 - **Project overview**
 - **Requirements checklist** ✅
-- **Key metrics** (3,009 points, 15% improvement, etc.)
+- **Key metrics** (3,009 points, about 2.5% lower test MAE, etc.)
 - **GitHub links**
 
 ---
@@ -95,7 +95,7 @@ git push
 ## 🔧 Files Changed
 
 1. **app_gradio.py** ← NEW! Gradio wrapper (FREE)
-2. **requirements.txt** ← Updated (added gradio==4.44.0)
+2. **requirements.txt** ← Updated (added gradio==5.50.0)
 3. **README_HF.md** ← Updated (SDK: gradio)
 4. **HUGGINGFACE_DEPLOYMENT.md** ← Rewritten for Gradio
 

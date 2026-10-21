@@ -2,7 +2,7 @@
 # Dependencies for Hugging Face Space deployment (Gradio SDK - FREE)
 
 # Gradio for HF Spaces interface (free tier)
-gradio==4.44.0
+gradio==5.50.0
 
 # Core pipeline uses Python 3.12+ standard library only:
 # - json, csv for data handling

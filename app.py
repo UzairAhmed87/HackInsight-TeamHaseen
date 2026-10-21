@@ -4,6 +4,7 @@ Hugging Face Space App - Gradio Wrapper (FREE TIER)
 Wraps the existing dashboard for HF Spaces using Gradio SDK
 """
 
+import csv
 import gradio as gr
 import sys
 from pathlib import Path
@@ -53,8 +54,9 @@ def ask_insight_agent(question):
     
     try:
         # Call the insight agent
-        result = insight_agent.answer_question(question, format_type='json')
-        return result
+        if not question or not question.strip():
+            return {"answer": "Please type a question.", "status": "error"}
+        return insight_agent.answer_question(question)
     except Exception as e:
         return {
             "answer": f"Error: {str(e)}",
@@ -72,13 +74,23 @@ def format_agent_response(response):
         output = f"**Answer:** {answer}\n\n"
         output += f"**Status:** {status}\n\n"
         
-        if 'evidence' in response:
+        evidence = response.get('evidence') or []
+        if evidence:
             output += "**Evidence:**\n"
-            for key, val in response['evidence'].items():
-                output += f"- {key}: {val}\n"
-        
-        if 'limitations' in response and response['limitations']:
-            output += f"\n**Limitations:** {response['limitations']}\n"
+            for item in evidence:
+                locator = item.get('locator') or item.get('operation') or item.get('kind', '')
+                date_range = item.get('date_range')
+                span = f" ({date_range['start']} → {date_range['end']})" if date_range else ""
+                output += f"- `{item.get('source_file', '')}` — {locator}{span}\n"
+
+        limitations = response.get('limitations') or []
+        if limitations:
+            output += "\n**Limitations:**\n"
+            for item in (limitations if isinstance(limitations, list) else [limitations]):
+                output += f"- {item}\n"
+
+        if response.get('data_as_of'):
+            output += f"\n_Data as of: {response['data_as_of']}_\n"
         
         return output
     return str(response)
@@ -87,13 +99,19 @@ def get_pipeline_status():
     """Get the latest pipeline run status"""
     if PIPELINE_RUNS.exists():
         try:
-            with open(PIPELINE_RUNS, 'r') as f:
-                lines = f.readlines()
-                if len(lines) > 1:
-                    last_run = lines[-1].strip()
-                    return f"**Latest Pipeline Run:**\n```\n{last_run}\n```"
-        except:
-            pass
+            with open(PIPELINE_RUNS, newline='') as f:
+                runs = list(csv.DictReader(f))
+        except (OSError, csv.Error):
+            runs = []
+        if runs:
+            latest = runs[-1]
+            successful = [r for r in runs if r.get('status', '').startswith('success')]
+            text = f"**Total logged runs:** {len(runs)}\n\n"
+            text += f"**Latest run:** {latest.get('timestamp')} — `{latest.get('status')}`\n\n"
+            if successful:
+                last_ok = successful[-1]
+                text += f"**Last successful run:** {last_ok.get('timestamp')} ({last_ok.get('records_processed')} records, {last_ok.get('duration_seconds')}s)\n"
+            return text
     return "Pipeline runs log not available"
 
 def get_quality_summary():
@@ -103,26 +121,18 @@ def get_quality_summary():
             with open(QUALITY_REPORT, 'r') as f:
                 report = json.load(f)
                 
+            agent = report.get('data_quality_agent', {})
+            counts = agent.get('counts', {})
+
             summary = "**Data Quality Summary:**\n\n"
-            
-            # Overall status
-            if 'overall_status' in report:
-                summary += f"- **Status:** {report['overall_status']}\n"
-            
-            # Decision counts
-            if 'decision_counts' in report:
-                counts = report['decision_counts']
-                summary += f"- **Fix:** {counts.get('fix', 0)} decisions\n"
-                summary += f"- **Fill:** {counts.get('fill', 0)} decisions\n"
-                summary += f"- **Flag:** {counts.get('flag', 0)} decisions\n"
-            
-            # Severity breakdown
-            if 'severity_breakdown' in report:
-                severity = report['severity_breakdown']
-                summary += f"\n**Severity:**\n"
-                for level, count in severity.items():
-                    summary += f"- {level}: {count}\n"
-            
+            summary += f"- **Quality status:** {report.get('quality_status', agent.get('status', 'unknown'))}\n"
+            summary += f"- **Agent status:** {agent.get('status', 'unknown')}\n"
+            summary += f"- **Checks:** {counts.get('passed_checks', 0)} passed, {counts.get('warning_checks', 0)} warnings, {counts.get('failed_checks', 0)} failed\n"
+            summary += f"- **FIX:** {counts.get('fixes', 0)} · **FILL** (not applied): {counts.get('fills_not_applied', 0)} · **FLAG:** {counts.get('flags', 0)}\n"
+            summary += "\n**Data Freshness:**\n\n"
+            summary += f"- **Observations:** {report.get('first_observation_date')} → {report.get('last_observation_date')} ({report.get('gold_record_count')} gold rows)\n"
+            summary += f"- **Latest observation age:** {agent.get('source_age_days')} days\n"
+            summary += f"- **Last quality check:** {agent.get('checked_at_utc')}\n"
             return summary
         except Exception as e:
             return f"Error loading quality report: {e}"
@@ -136,7 +146,7 @@ with gr.Blocks(title="HackInsight Air Quality Pakistan", theme=gr.themes.Soft())
     **Automated air quality intelligence system with:**
     - 📊 Journal-quality data warehouse (2 independent sources)
     - ✅ Automated quality monitoring (15 validation rules)
-    - 📈 Forecasting model (beats baseline by 15%)
+    - 📈 Forecasting model (beats persistence: 9.90 vs 10.15 test MAE)
     - 🤖 Evidence-grounded RAG Insight Agent
     
     **GitHub:** [UzairAhmed87/HackInsight-TeamHaseen](https://github.com/UzairAhmed87/HackInsight-TeamHaseen)
@@ -223,7 +233,7 @@ with gr.Blocks(title="HackInsight Air Quality Pakistan", theme=gr.themes.Soft())
             
             **3. Forecasting Model**
             - ✅ Linear regression beats persistence baseline
-            - ✅ MAE: 15.4 vs 18.2 (15% improvement)
+            - ✅ Test MAE: 9.90 vs 10.15 µg/m³ (persistence)
             - ✅ Time-based train/val/test splits
             - ✅ Uncertainty quantification
             
@@ -241,7 +251,7 @@ with gr.Blocks(title="HackInsight Air Quality Pakistan", theme=gr.themes.Soft())
             - **Data Points:** 3,009 daily observations
             - **Coverage:** 8+ years (2016-2024)
             - **Quality Checks:** 15 validation rules
-            - **Model Performance:** 15% better than baseline
+            - **Model Performance:** about 2.5% lower test MAE than persistence
             - **Automation:** 24 runs/day
             - **Cost:** $0/month
             

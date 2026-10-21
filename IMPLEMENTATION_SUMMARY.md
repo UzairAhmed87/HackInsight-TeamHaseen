@@ -114,7 +114,7 @@ HackInsight-TeamHaseen/
 ✅ **2 independent sources** (PAQI + AirGradient)  
 ✅ **Traceable warehouse** (SHA-256 lineage)  
 ✅ **Data Quality Agent** (15 rules, fix/fill/flag)  
-✅ **Model beats baseline** (15.4 vs 18.2 MAE)  
+✅ **Model beats baseline** (9.90 vs 10.15 test MAE)  
 ✅ **RAG Insight Agent** (cited, no hallucinations)  
 ✅ **Hourly automation** (GitHub Actions)  
 ✅ **Dashboard** (freshness/quality/last run)  
@@ -245,7 +245,7 @@ Memorize these for physical defense:
 - **Coverage:** 8+ years (2016-10-06 to 2024-12-31)
 - **Data Sources:** 2 independent (PAQI CC BY 4.0 + AirGradient)
 - **Quality Checks:** 15 validation rules
-- **Model Performance:** 15.4 MAE (vs 18.2 baseline) = 15% improvement
+- **Model Performance:** 9.90 vs 10.15 test MAE (about 2.5% lower than persistence)
 - **Uncertainty:** Empirical 5th-95th percentile from validation residuals
 - **Pipeline Frequency:** Hourly (24 runs/day)
 - **Code Size:** ~2,500 lines Python + 800 lines JS/CSS
@@ -259,7 +259,7 @@ Memorize these for physical defense:
 ## 🎓 VIVA DEFENSE - QUICK PREP
 
 ### Opening (30 seconds)
-"We built HackInsight - a journal-quality air quality intelligence system for Pakistan. It has automated data quality monitoring, forecasting that beats baseline by 15%, and an AI agent that never invents facts. Let me show you."
+"We built HackInsight - a journal-quality air quality intelligence system for Pakistan. It has automated data quality monitoring, forecasting that beats persistence: 9.90 vs 10.15 test MAE, and an AI agent that never invents facts. Let me show you."
 
 ### Demo Flow (2 minutes)
 1. **Show GitHub:** "v1.0-final tag, all code open source"

@@ -16,7 +16,7 @@
 |-----------|--------|-------|
 | Data Warehouse | ✅ 100% | 2 sources, SHA-256 lineage, traceable |
 | Data Quality Agent | ✅ 100% | 15+ rules, fix/fill/flag logged |
-| Forecasting Model | ✅ 100% | Beats baseline by 15.4% |
+| Forecasting Model | ✅ 100% | Beats persistence on the test split (9.90 vs 10.15 MAE) |
 | Insight Agent (RAG) | ✅ 100% | Cited answers, no hallucinations |
 | Automated Pipeline | ✅ 100% | GitHub Actions hourly cron |
 | Dashboard UI | ✅ 100% | Modern, dark mode, responsive |
@@ -64,7 +64,7 @@
 - JSON report with aggregate metrics
 
 ### 3. Model ✅ COMPLETE
-- ✅ **Beats baseline:** Linear 15.4 vs Persistence 18.2 MAE
+- ✅ **Beats baseline:** Linear 9.90 vs persistence 10.15 test MAE
 - ✅ **Pre-declared baseline:** Persistence documented
 - ✅ **Time-based splits:** Chronological train/val/test
 - ✅ **Uncertainty:** Empirical validation residuals
@@ -283,7 +283,7 @@ make test          # Run tests
 
 ### Technical Highlights
 1. **Data Quality:** "SHA-256 row-level lineage, 15 validation rules, every decision logged"
-2. **Model:** "Linear regression beats persistence by 15.4% with empirical uncertainty intervals"
+2. **Model:** "Linear regression beats persistence (test MAE 9.90 vs 10.15) with empirical uncertainty intervals"
 3. **RAG:** "Deterministic routing, cites sources, refuses to hallucinate"
 4. **Automation:** "GitHub Actions runs hourly, logs to prefect_runs.csv, zero manual work"
 
@@ -304,7 +304,7 @@ make test          # Run tests
 - **Coverage:** 8+ years (2016-2024)
 - **Data Sources:** 2 independent (PAQI + AirGradient)
 - **Quality Checks:** 15 validation rules
-- **Model Performance:** 15.4 MAE vs 18.2 baseline (15% improvement)
+- **Model Performance:** 9.90 vs 10.15 test MAE (about 2.5% lower)
 - **Pipeline Runs:** Hourly (24 per day)
 - **Code Size:** ~2,500 lines Python + 800 lines JS/CSS
 - **Dependencies:** Zero (standard library only)

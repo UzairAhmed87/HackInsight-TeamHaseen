@@ -116,7 +116,7 @@ Air pollution kills 7 million people annually (WHO). In Pakistan, cities like Ka
 - Pipeline Runtime: ~25 seconds (+67% for validation)
 - Quality Checks: 15 rules
 - Model Training: ~0.5 seconds
-- Forecast MAE: 15.4 µg/m³ (vs 18.2 baseline)
+- Test MAE: 9.90 µg/m³ (vs 10.15 persistence)
 
 **Optimization:**
 - Used Decimal arithmetic instead of float (precision)
@@ -124,7 +124,7 @@ Air pollution kills 7 million people annually (WHO). In Pakistan, cities like Ka
 - Validation residuals for uncertainty (no parametric assumptions)
 
 **Impact:**
-- ✅ Beats baseline by 15.4%
+- ✅ Beats persistence on the test split (9.90 vs 10.15 MAE)
 - ✅ Full quality traceability
 - ✅ Journal-ready methodology
 
@@ -239,7 +239,7 @@ value = Decimal(raw_value)
 **Optimization 3: Chronological Splits**
 - **Before:** Random train/test split (data leakage risk)
 - **After:** Time-based splits with validation set
-- **Impact:** 15.4% better than baseline (validated)
+- **Impact:** 2.5% lower test MAE than persistence (validated)
 
 ### Dashboard Performance
 
