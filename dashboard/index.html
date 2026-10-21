@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Pakistan air-quality intelligence: historical PAQI Karachi evidence, public live neighbourhood sensors, and explainable forecast evaluation.">
-  <title>HackInsight | Pakistan Air Quality Intelligence</title>
+  <title>HaseenInsight | Pakistan Air Quality Intelligence</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <a class="brand" href="/" aria-label="HackInsight dashboard home">
+    <a class="brand" href="/" aria-label="HaseenInsight dashboard home">
       <span class="brand-mark" aria-hidden="true">HI</span>
-      <span>HackInsight <span class="brand-year">'26</span></span>
+      <span>HaseenInsight</span>
     </a>
     <nav aria-label="Primary navigation">
       <a href="#live">Live sensors</a>
@@ -21,17 +21,17 @@
       <a href="#forecast">Forecast</a>
       <a href="#insight">Ask</a>
       <a href="#method">How it works</a>
-      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
-        <span id="theme-icon">🌙</span>
-      </button>
     </nav>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <span id="theme-icon">🌙</span>
+    </button>
   </header>
   <main id="main">
     <section class="hero" aria-labelledby="page-title">
       <div class="hero-copy">
         <p class="eyebrow">PAKISTAN · KARACHI FOCUS · EVIDENCE FIRST</p>
         <h1 id="page-title">Air quality intelligence you can defend.</h1>
-        <p class="hero-lede">Historical PAQI daily PM2.5 for Karachi, public neighbourhood live sensors, honest forecast backtests, and an Insight Agent that cites evidence or says it does not know.</p>
+        <p class="hero-lede">Karachi PM2.5 from three public sources (PAQI, the US Consulate monitor and the Urban Unit sensor network, updated hourly), live neighbourhood sensors, honest forecast backtests, and an Insight Agent that cites evidence or says it does not know.</p>
       </div>
       <aside class="notice" role="note">
         <span class="notice-icon" aria-hidden="true">!</span>
@@ -53,7 +53,7 @@
           <div class="health-widget-icon" id="health-icon">🏥</div>
           <div>
             <h3 class="health-widget-title">Today's Air Quality</h3>
-            <p class="health-widget-subtitle">Based on latest PM2.5 measurement</p>
+            <p class="health-widget-subtitle" id="health-widget-subtitle">Based on latest PM2.5 measurement</p>
           </div>
         </div>
         <div id="aqi-status"></div>
@@ -64,6 +64,7 @@
       </div>
       
       <!-- Stats Summary Cards -->
+      <p class="stats-source muted" id="stats-source"></p>
       <div class="stats-summary-grid" id="stats-summary">
         <article class="stats-card">
           <div class="stats-icon">📈</div>
@@ -153,7 +154,7 @@
           <div class="panel-heading">
             <div>
               <h3>Air Quality Calendar</h3>
-              <p>Visual heatmap showing daily air quality patterns. Darker colors indicate worse air quality.</p>
+              <p id="heatmap-subtitle">Visual heatmap showing daily air quality patterns. Darker colors indicate worse air quality.</p>
             </div>
           </div>
           <div id="calendar-heatmap" class="calendar-heatmap"></div>
@@ -179,12 +180,12 @@
         <div class="section-heading subheading"><div><h3>Year-by-year summary</h3></div></div>
         <div class="table-wrap">
           <table>
-            <caption class="sr-only">Annual summary of numeric PAQI Karachi PM2.5 readings</caption>
-            <thead><tr><th scope="col">Year</th><th scope="col">Numeric days</th><th scope="col">Missing</th><th scope="col">Mean</th><th scope="col">Median</th><th scope="col">Range</th></tr></thead>
-            <tbody id="yearly-body"><tr><td colspan="6">Loading yearly summaries…</td></tr></tbody>
+            <caption class="sr-only">Annual summary of daily PM2.5 readings for each source</caption>
+            <thead><tr><th scope="col">Source</th><th scope="col">Year</th><th scope="col">Numeric days</th><th scope="col">Missing</th><th scope="col">Mean</th><th scope="col">Median</th><th scope="col">Range</th></tr></thead>
+            <tbody id="yearly-body"><tr><td colspan="7">Loading yearly summaries…</td></tr></tbody>
           </table>
         </div>
-        <p class="callout"><strong>Interpretation:</strong> Published PAQI Karachi series. Station identity, network aggregation and citywide exposure representativeness are not established.</p>
+        <p class="callout"><strong>Interpretation:</strong> Each source is summarised separately. PAQI is a published series that ends in 2024; the US Consulate monitor stopped reporting in March 2025; the Urban Unit network is a median of neighbourhood sensors and is not a citywide average.</p>
       </section>
 
       <section id="quality" aria-labelledby="quality-heading">
@@ -194,7 +195,7 @@
         </div>
         <div class="quality-layout">
           <article class="panel quality-summary">
-            <h3>Latest historical audit run</h3>
+            <h3>Latest PAQI audit run (other sources are audited in the Sources section)</h3>
             <dl class="detail-list">
               <div><dt>Run ID</dt><dd id="quality-run-id">—</dd></div>
               <div><dt>Checked at (UTC)</dt><dd id="quality-run-time">—</dd></div>
@@ -391,6 +392,6 @@
     </div>
   </div>
   
-  <footer><span>HackInsight '26 · Air Quality Intelligence for Pakistan</span><span id="page-generated"></span></footer>
+  <footer><span>HaseenInsight · Air Quality Intelligence for Pakistan · HackInsight '26 submission</span><span id="page-generated"></span></footer>
 </body>
 </html>

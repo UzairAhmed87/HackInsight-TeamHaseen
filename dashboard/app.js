@@ -384,7 +384,7 @@ function renderYearTable(rows) {
   if (!rows.length) {
     const tr = document.createElement("tr");
     const td = element("td", "", "No yearly summary is available.");
-    td.colSpan = 6;
+    td.colSpan = 7;
     tr.append(td);
     body.append(tr);
     return;
@@ -392,6 +392,7 @@ function renderYearTable(rows) {
   rows.forEach((year) => {
     const tr = document.createElement("tr");
     [
+      year.source || "PAQI",
       year.year,
       integer(year.n),
       integer(year.missing),
@@ -597,12 +598,22 @@ function renderHowItWorks(steps) {
   const list = document.getElementById("how-it-works");
   if (!list) return;
   list.replaceChildren();
-  (steps || []).forEach((step, index) => {
-    const item = element("li", "");
-    item.append(element("strong", "", `${index + 1}.`));
-    item.append(document.createTextNode(` ${step}`));
-    list.append(item);
+  (steps || []).forEach((step) => {
+    list.append(element("li", "", step));
   });
+}
+
+function newestSeries(historical) {
+  const candidates = [{ label: "PAQI Karachi daily (published)", points: historical.series || [] }].concat(
+    (historical.other_series || []).map((item) => ({ label: item.label, points: item.points || [] })),
+  );
+  const lastNumeric = (points) => {
+    for (let index = points.length - 1; index >= 0; index -= 1) {
+      if (typeof points[index].value === "number") return points[index].date;
+    }
+    return "";
+  };
+  return candidates.reduce((best, item) => (lastNumeric(item.points) > lastNumeric(best.points) ? item : best));
 }
 
 function renderDashboard(data) {
@@ -617,7 +628,7 @@ function renderDashboard(data) {
   text(
     "freshness-label",
     latest
-      ? `Newest daily reading ${latest.date} (${latest.source}, ${integer(latest.age_days)} days old). The published PAQI series ends ${freshness.last_observation_date}.`
+      ? `Newest daily reading ${latest.date} (${latest.source}, ${latest.age_days === 1 ? "1 day" : `${integer(latest.age_days)} days`} old). The published PAQI series ends ${freshness.last_observation_date}.`
       : `Historical last observation ${freshness.last_observation_date} · ${integer(freshness.age_days)} days old. Live sensors are a separate feed below.`,
   );
   text(
@@ -647,9 +658,12 @@ function renderDashboard(data) {
       : null;
   renderHealthWidget(latestPM25);
   
-  // Render stats cards and heatmap
-  renderStatsCards(data.historical.series);
-  renderCalendarHeatmap(data.historical.series);
+  const recent = newestSeries(data.historical);
+  text("health-widget-subtitle", latest ? `Daily PM2.5 for ${latest.date} · ${latest.source}` : "Based on latest PM2.5 measurement");
+  text("stats-source", `Cards and calendar use ${recent.label}, the source with the most recent data.`);
+  text("heatmap-subtitle", `${recent.label}. Darker colours indicate worse air quality; grey days have no complete reading.`);
+  renderStatsCards(recent.points);
+  renderCalendarHeatmap(recent.points);
   
   renderLive(data.live || { status: "unavailable", sensors: [] });
   const otherSeries = data.historical.other_series || [];
@@ -662,7 +676,11 @@ function renderDashboard(data) {
     "chart-caption",
     `${data.historical.series.length.toLocaleString()} PAQI daily records · ${missingDates.length} blank PAQI readings shown as gaps${missingDates.length ? ` (${missingDates.join(", ")})` : ""}${otherCounts ? ` · ${otherCounts} daily values` : ""}. Days that fail a source's completeness rule are left as gaps.`,
   );
-  renderYearTable(data.historical.yearly_summary || []);
+  renderYearTable(
+    (data.historical.yearly_summary || []).map((row) => ({ ...row, source: "PAQI" })).concat(
+      ...otherSeries.map((item) => (item.yearly_summary || []).map((row) => ({ ...row, source: item.label.split(" (")[0] }))),
+    ),
+  );
   renderQuality(data.quality);
   renderForecast(data.forecast);
   renderHealth(data.health_guidance);
@@ -1185,9 +1203,9 @@ function renderCalendarHeatmap(series) {
     dateMap[row.date] = row.value;
   });
   
-  // Generate all days of the year
+  // Stop at the newest reading so future days are not drawn as "no data".
   const startDate = new Date(`${latestYear}-01-01`);
-  const endDate = new Date(`${latestYear}-12-31`);
+  const endDate = new Date(`${yearData[yearData.length - 1].date}`);
   
   for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     const dateStr = d.toISOString().split('T')[0];

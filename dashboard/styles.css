@@ -2735,3 +2735,48 @@ footer {
 .chart-legend-swatch.chart-series-consulate { background: #f97316; }
 .chart-legend-swatch.chart-series-network { background: #10b981; }
 .chart-legend-swatch.chart-series-other { background: #a855f7; }
+
+/* Header layout: the global `button` rule (full width, top margin) must not reach the theme toggle. */
+.site-header { gap: 16px; }
+.site-header nav { margin-left: auto; flex-wrap: nowrap; gap: 20px; min-width: 0; }
+.site-header nav a { white-space: nowrap; }
+.site-header .theme-toggle {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
+  box-shadow: none;
+}
+
+@media (max-width: 780px) {
+  .site-header {
+    position: sticky;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    height: auto;
+    min-height: 0;
+    padding: 10px 16px;
+    gap: 6px 12px;
+  }
+  .site-header .brand { order: 1; }
+  .site-header .theme-toggle { order: 2; margin-left: auto; }
+  .site-header nav {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    overflow-x: auto;
+    gap: 16px;
+    scrollbar-width: none;
+  }
+  .site-header nav::-webkit-scrollbar { display: none; }
+}
+
+.stats-source { margin: 0 0 8px; font-size: 0.85rem; }
+
+.source-panel + .source-panel { margin-top: 16px; }
