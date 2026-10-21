@@ -1,3 +1,5 @@
+> **Superseded on 2026-10-21:** the warehouse now has three sources (PAQI, U.S. Consulate Karachi via OpenAQ/AirNow, Urban Unit AirGradient via OpenAQ) and two-source compliance is established in `data/quality/warehouse_quality_report.json`. This file is kept as the decision history; see `README.md` for the current state.
+
 # Dataset proposal — HackInsight '26 Air Quality Intelligence for Pakistan
 
 **Status:** Phase 2 pipeline operational for PAQI; two-source, aggregation-method, and forecasting-evaluation gates remain open.  

@@ -549,7 +549,7 @@ def run_experiment(
         "limitations": [
             "Historical backtest ends 2024-12-31 and is not a current forecast.",
             "PAQI station identity, aggregation, precise timezone/window, QA, blank-value meaning, and method history remain undocumented.",
-            "Two-source compliance is not established; only the approved PAQI source is used.",
+            "The model uses only the PAQI daily series; the U.S. Consulate and Urban Unit sources are not model inputs.",
         ],
     }
 
