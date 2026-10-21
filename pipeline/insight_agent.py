@@ -20,6 +20,9 @@ METRICS_RELATIVE = Path("data/reports/forecast_metrics.json")
 PREDICTIONS_RELATIVE = Path("data/reports/forecast_predictions.csv")
 SOURCE_REGISTER_RELATIVE = Path("docs/source_register.csv")
 FORECAST_DOC_RELATIVE = Path("docs/forecasting_results.md")
+WAREHOUSE_RELATIVE = Path("data/quality/warehouse_quality_report.json")
+NETWORK_REPORT_RELATIVE = Path("data/quality/urban_unit_quality_report.json")
+CROSS_SOURCE_RELATIVE = Path("data/processed/gold_karachi_daily_cross_source.csv")
 ABSTENTION = "I don't know based on the available evidence."
 
 
@@ -175,6 +178,25 @@ def _classify(question: str) -> str:
         "neighbourhood sensor",
         "neighborhood sensor",
     )
+    if _contains_any(
+        text,
+        "agree",
+        "agreement",
+        "compare the sources",
+        "compare sources",
+        "consulate",
+        "embassy",
+        "reference monitor",
+        "second source",
+        "other source",
+        "correlat",
+        "cross-check",
+        "cross check",
+        "validate",
+    ):
+        return "cross_source"
+    if _contains_any(text, "how many sources", "which sources", "what sources", "warehouse", "all sources", "total rows"):
+        return "warehouse"
     if citywide_live:
         return "live"
     if sensor_live:
@@ -335,6 +357,59 @@ def _answer(
                 }
             )
             limitations.append("Live upstream outages or missing PM2.5 values produce an unavailable state, not a fabricated reading.")
+    elif route == "cross_source":
+        warehouse = _read_json(root / WAREHOUSE_RELATIVE)
+        cross = warehouse.get("cross_source") or {}
+        if not cross.get("paired_days"):
+            answer = f"{ABSTENTION} Cross-source agreement has not been computed in this build."
+            status = "abstained"
+        else:
+            answer = (
+                f"On {cross['paired_days']:,} days with both a PAQI value and a complete U.S. Consulate daily mean "
+                f"({cross['first_paired_date']} to {cross['last_paired_date']}), the two series have Pearson r = "
+                f"{cross['pearson_r']}. PAQI is on average {cross['mean_difference_paqi_minus_consulate']} µg/m³ higher "
+                f"(mean absolute difference {cross['mean_absolute_difference']} µg/m³), and "
+                f"{cross['large_disagreement_days']} days are flagged for large disagreement."
+            )
+        evidence.append(_report_evidence(WAREHOUSE_RELATIVE, "$.cross_source", cross))
+        evidence.append({"source_file": CROSS_SOURCE_RELATIVE.as_posix(), "kind": "gold_table", "locator": "paired rows"})
+        limitations.append(cross.get("date_alignment_caveat") or "Day boundaries may differ between sources.")
+        limitations.append("Agreement shows the series move together; it does not prove PAQI excludes the Consulate monitor.")
+    elif route == "warehouse":
+        warehouse = _read_json(root / WAREHOUSE_RELATIVE)
+        sources = warehouse.get("sources", [])
+        if not sources:
+            answer = f"{ABSTENTION} The warehouse report is not available in this build."
+            status = "abstained"
+        else:
+            parts = [
+                f"{item['publisher']} ({item['license']}, {item['resolution']}, {int(item['gold_rows'] or 0):,} gold rows, "
+                f"latest {item['latest_observation']})"
+                for item in sources
+            ]
+            answer = (
+                f"The warehouse holds {warehouse.get('total_gold_rows', 0):,} gold rows from {len(sources)} sources: "
+                + "; ".join(parts)
+                + f". Two-source compliance: {warehouse.get('two_source_compliance')}."
+            )
+        evidence.append(_report_evidence(WAREHOUSE_RELATIVE, "$.sources", {"sources": sources}))
+        limitations.append("The forecast model is trained on the PAQI daily series only.")
+    elif route == "live" and _read_json(root / NETWORK_REPORT_RELATIVE).get("latest_hour", {}).get("sensors_reporting"):
+        network = _read_json(root / NETWORK_REPORT_RELATIVE)
+        hour = network["latest_hour"]
+        answer = (
+            f"I cannot give a citywide air-quality index. The most recent hour in the warehouse ends {hour['datetime_to_utc']}: "
+            f"{hour['sensors_reporting']} of {hour['sensors_configured']} Urban Unit AirGradient sensors reported, with a "
+            f"median PM2.5 of {hour['median_pm25_ug_m3']} µg/m³ (range {hour['min_pm25_ug_m3']}–{hour['max_pm25_ug_m3']} µg/m³). "
+            f"The PAQI historical series ends on {data_as_of}."
+        )
+        status = "partially_answered"
+        data_as_of = hour["datetime_to_utc"]
+        evidence.append(_report_evidence(NETWORK_REPORT_RELATIVE, "$.latest_hour", hour, row_ids=hour.get("row_ids", [])))
+        evidence.append(_report_evidence(NETWORK_REPORT_RELATIVE, "$.checks.freshness", network["checks"]["freshness"]))
+        limitations.append(network.get("checks", {}).get("measurement_caveat", {}).get("detail", ""))
+        limitations.append("A median of a few neighbourhood sensors is not a regulatory or citywide exposure estimate.")
+        limitations.append("The value is as of the last hourly pipeline run, not this second.")
     elif route in {"live", "causal"}:
         if route == "live":
             answer = (
@@ -597,7 +672,7 @@ def _answer(
         limitations.append(
             f"This is historical backtest evidence ending {test_dates['end']}, not a live forecast; no statistical significance is claimed."
         )
-        limitations.append("Only PAQI was used; two-source compliance is not established.")
+        limitations.append("The model uses the PAQI daily series only; the other warehouse sources are not model inputs.")
     elif route == "methodology":
         source_row = _read_source_register(root / SOURCE_REGISTER_RELATIVE)
         quality_checks = quality.get("checks", {})
@@ -649,10 +724,10 @@ def _answer(
             ]
         )
         limitations.append("Station identity, monitor/network aggregation, exact daily window/timezone and sensor QA are not established.")
-        limitations.append("Reuse of a candidate second source and two-source compliance remain unresolved.")
+        limitations.append("These unresolved items concern PAQI; the U.S. Consulate and Urban Unit sources are described in the warehouse report.")
         status = "partially_answered"
     else:
-        answer = ABSTENTION + " This local agent supports only questions about the loaded PAQI gold table, quality report, source register and forecast evaluation."
+        answer = ABSTENTION + " This agent answers only from the warehouse: PAQI gold table, U.S. Consulate and Urban Unit sensor reports, quality reports, source register and forecast evaluation."
         status = "abstained"
         limitations.append("No matching evidence category was found; no unsupported inference was attempted.")
 

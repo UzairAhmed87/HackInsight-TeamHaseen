@@ -5,6 +5,7 @@ import json
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from pipeline import insight_agent
 
@@ -94,13 +95,41 @@ class InsightAgentTests(unittest.TestCase):
         self.assertEqual(prediction_evidence["scored_test_prediction_count"], 436)
         self.assertTrue(set(prediction_evidence["sample_row_ids"]).issubset(scored_test_ids))
 
-    def test_live_current_question_abstains_and_distinguishes_data_as_of(self) -> None:
+    def test_current_question_uses_latest_network_hour_without_citywide_claim(self) -> None:
         result = self.ask("What is the current air quality in Karachi?")
+        report = json.loads((self.root / insight_agent.NETWORK_REPORT_RELATIVE).read_text(encoding="utf-8"))
+        hour = report["latest_hour"]
+        self.assertEqual(result["status"], "partially_answered")
+        self.assertIn("cannot give a citywide air-quality index", result["answer"])
+        self.assertIn(f"{hour['median_pm25_ug_m3']} µg/m³", result["answer"])
+        self.assertEqual(result["data_as_of"], hour["datetime_to_utc"])
+        self.assertNotEqual(result["data_as_of"], result["generated_at"])
+
+    def test_live_question_abstains_when_network_report_has_no_reading(self) -> None:
+        original = insight_agent._read_json
+
+        def without_network(path: Path) -> dict:
+            if path.name == insight_agent.NETWORK_REPORT_RELATIVE.name:
+                return {}
+            return original(path)
+
+        with patch.object(insight_agent, "_read_json", without_network):
+            result = self.ask("What is the current air quality in Karachi?")
         self.assertEqual(result["status"], "abstained")
-        self.assertIn("I don't know based on the available evidence.", result["answer"])
         self.assertIn("cannot establish current or real-time", result["answer"])
         self.assertEqual(result["data_as_of"], "2024-12-31")
-        self.assertNotEqual(result["data_as_of"], result["generated_at"])
+
+    def test_cross_source_question_cites_warehouse_agreement(self) -> None:
+        result = self.ask("Do PAQI and the US Consulate monitor agree?")
+        cross = json.loads((self.root / insight_agent.WAREHOUSE_RELATIVE).read_text(encoding="utf-8"))["cross_source"]
+        self.assertEqual(result["status"], "answered")
+        self.assertIn(f"Pearson r = {cross['pearson_r']}", result["answer"])
+        self.assertIn(f"{cross['paired_days']:,} days", result["answer"])
+
+    def test_warehouse_question_lists_every_source(self) -> None:
+        result = self.ask("Which sources are in the warehouse?")
+        self.assertIn("3 sources", result["answer"])
+        self.assertIn("US Public Domain", result["answer"])
 
     def test_unresolved_methodology_is_partially_answered(self) -> None:
         result = self.ask("What monitor and daily averaging method produced these values?")
@@ -128,6 +157,8 @@ class InsightAgentTests(unittest.TestCase):
             self.ask("What is the current air quality in Karachi?"),
             self.ask("What is the mean PM2.5 reading?"),
             self.ask("What date range and how many observations are available?"),
+            self.ask("Do PAQI and the US Consulate monitor agree?"),
+            self.ask("Which sources are in the warehouse?"),
         ]
         for result in results:
             for item in result["evidence"]:

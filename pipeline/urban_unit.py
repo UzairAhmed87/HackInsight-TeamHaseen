@@ -354,6 +354,19 @@ def run_source_pipeline(root: Path = ROOT, *, run_id: str = "", now: datetime | 
     _decision(log, checked_at, issue="uncorrected_low_cost_sensor", severity="warning", decision="FLAG", action="disclosed",
               reason=config["measurement_caveat"])
 
+    latest_hour_rows = [row for row in rows if row["datetime_to_utc"] == latest and row["quality_flag"] in DAILY_VALID_FLAGS]
+    latest_values = [float(row["pm25_ug_m3"]) for row in latest_hour_rows]
+    latest_hour = {
+        "datetime_to_utc": latest,
+        "sensors_reporting": len(latest_values),
+        "sensors_configured": len(config["locations"]),
+        "median_pm25_ug_m3": round(statistics.median(latest_values), 1) if latest_values else None,
+        "min_pm25_ug_m3": round(min(latest_values), 1) if latest_values else None,
+        "max_pm25_ug_m3": round(max(latest_values), 1) if latest_values else None,
+        "by_sensor": {row["location_name"]: float(row["pm25_ug_m3"]) for row in latest_hour_rows},
+        "row_ids": [row["row_id"] for row in latest_hour_rows],
+    }
+
     sensor_daily, network = _daily(config, rows)
     atomic_csv(root / "data" / "cleaned" / "urban_unit_karachi_hourly_pm25.csv", HOURLY_FIELDS, rows)
     atomic_csv(root / "data" / "processed" / "gold_urban_unit_karachi_hourly.csv", HOURLY_FIELDS, rows)
@@ -383,6 +396,7 @@ def run_source_pipeline(root: Path = ROOT, *, run_id: str = "", now: datetime | 
         "last_observation_utc": latest,
         "latest_age_hours": age_hours,
         "latest_by_sensor_utc": latest_by_sensor,
+        "latest_hour": latest_hour,
         "latest_network_day": network[-1] if network else None,
         "quality_flag_counts": dict(sorted(flags.items())),
         "checks": checks,
