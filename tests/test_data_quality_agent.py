@@ -353,7 +353,7 @@ class DataQualityAgentTests(unittest.TestCase):
         )
         self.assertEqual(
             quality["data_quality_agent"]["two_source_compliance"],
-            "not_established",
+            "assessed_at_warehouse_level",
         )
 
     def test_pipeline_fails_on_critical_invalid_measurement(self) -> None:

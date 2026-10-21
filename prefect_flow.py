@@ -21,10 +21,11 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 from pipeline import forecasting  # noqa: E402
-from pipeline import run as warehouse  # noqa: E402
+from pipeline import warehouse  # noqa: E402
 
 RUNS_LOG = ROOT / "prefect_runs.csv"
 EXECUTION_STATUS = ROOT / "data" / "reports" / "execution_status.json"
+WAREHOUSE_REPORT = ROOT / "data" / "quality" / "warehouse_quality_report.json"
 QUALITY_REPORT = ROOT / "data" / "quality" / "quality_report.json"
 FORECAST_METRICS = ROOT / "data" / "reports" / "forecast_metrics.json"
 
@@ -42,6 +43,8 @@ RUN_FIELDS = [
     "dq_checks_warning",
     "dq_checks_failed",
     "gold_rows",
+    "two_source_compliance",
+    "cross_source_pearson_r",
     "latest_observation_date",
     "test_mae_linear",
     "test_mae_persistence",
@@ -69,11 +72,14 @@ def _read_json(path: Path) -> dict[str, Any]:
 @task(name="build-warehouse-and-quality-agent", retries=2, retry_delay_seconds=60)
 def build_warehouse() -> dict[str, Any]:
     logger = get_run_logger()
-    code, status = warehouse.run_pipeline()
-    logger.info("Warehouse run %s finished with status %s", status.get("run_id"), status.get("status"))
+    code, report = warehouse.run_warehouse()
+    logger.info(
+        "Warehouse run %s: %s, %s gold rows, two-source compliance %s",
+        report.get("run_id"), report.get("status"), report.get("total_gold_rows"), report.get("two_source_compliance"),
+    )
     if code != 0:
-        raise PipelineRunFailed(f"make data failed: {status.get('errors')}")
-    return status
+        raise PipelineRunFailed(f"make data failed: {[s.get('status') for s in report.get('sources', [])]}")
+    return report
 
 
 @task(name="evaluate-forecast-model")
@@ -96,6 +102,7 @@ def _record_run(flow_obj: Any, flow_run: Any, state: Any) -> None:
     quality = _read_json(QUALITY_REPORT)
     counts = quality.get("data_quality_agent", {}).get("counts", {})
     test = _read_json(FORECAST_METRICS).get("splits", {}).get("test", {})
+    warehouse_report = _read_json(WAREHOUSE_REPORT)
     started = flow_run.start_time
     finished = datetime.now(timezone.utc)
     row = {
@@ -111,7 +118,9 @@ def _record_run(flow_obj: Any, flow_run: Any, state: Any) -> None:
         "dq_checks_passed": counts.get("passed_checks", ""),
         "dq_checks_warning": counts.get("warning_checks", ""),
         "dq_checks_failed": counts.get("failed_checks", ""),
-        "gold_rows": quality.get("gold_record_count", ""),
+        "gold_rows": warehouse_report.get("total_gold_rows", ""),
+        "two_source_compliance": warehouse_report.get("two_source_compliance", ""),
+        "cross_source_pearson_r": warehouse_report.get("cross_source", {}).get("pearson_r", ""),
         "latest_observation_date": quality.get("last_observation_date", ""),
         "test_mae_linear": test.get("linear_model", {}).get("mae", ""),
         "test_mae_persistence": test.get("persistence_on_model_matched_targets", {}).get("mae", ""),
@@ -133,9 +142,9 @@ def _record_run(flow_obj: Any, flow_run: Any, state: Any) -> None:
     on_crashed=[_record_run],
 )
 def hackinsight_pipeline() -> dict[str, Any]:
-    status = build_warehouse()
+    report = build_warehouse()
     metrics = evaluate_model()
-    return {"pipeline_status": status.get("status"), "test": metrics.get("splits", {}).get("test", {}).get("dates")}
+    return {"warehouse_status": report.get("status"), "test": metrics.get("splits", {}).get("test", {}).get("dates")}
 
 
 if __name__ == "__main__":

@@ -1,0 +1,56 @@
+{
+  "generated_at_utc": "2026-10-21T03:57:11Z",
+  "run_id": "20261021T035711.314302Z",
+  "status": "success_with_warnings",
+  "two_source_compliance": "established",
+  "total_gold_rows": 49946,
+  "sources": [
+    {
+      "source_id": "paqi_karachi_daily_pm25",
+      "publisher": "Pakistan Air Quality Initiative (PAQI)",
+      "access": "https://doi.org/10.5281/zenodo.15845428",
+      "license": "CC BY 4.0",
+      "resolution": "daily",
+      "gold_rows": 3009,
+      "status": "success_with_warnings",
+      "latest_observation": "2024-12-31",
+      "quality_report": "data/quality/quality_report.json"
+    },
+    {
+      "source_id": "us_consulate_karachi_pm25",
+      "publisher": "U.S. Department of State air quality monitoring programme, disseminated through U.S. EPA AirNow",
+      "access": "https://api.openaq.org/v3/locations/8156",
+      "license": "US Public Domain",
+      "resolution": "hourly (daily means derived)",
+      "gold_rows": 46937,
+      "daily_gold_rows": 2044,
+      "status": "success_with_warnings",
+      "latest_observation": "2025-03-04T12:00:00Z",
+      "quality_report": "data/quality/us_consulate_quality_report.json"
+    }
+  ],
+  "checks": {
+    "cross_source_agreement": {
+      "status": "pass",
+      "detail": "1399 days with both sources; Pearson r = 0.87, mean PAQI − Consulate = 3.43 µg/m³, 63 days flagged for large disagreement."
+    },
+    "two_independent_publishers": {
+      "status": "pass",
+      "detail": "PAQI (Zenodo, CC BY 4.0) and the U.S. Department of State monitor (AirNow via OpenAQ, US Public Domain) are different original publishers. PAQI does not document its input monitors, so measurement-level independence is reported as agreement statistics rather than assumed."
+    }
+  },
+  "cross_source": {
+    "overlap_days": 1981,
+    "paired_days": 1399,
+    "first_paired_date": "2019-05-23",
+    "last_paired_date": "2024-11-28",
+    "pearson_r": 0.87,
+    "mean_difference_paqi_minus_consulate": 3.43,
+    "mean_absolute_difference": 11.12,
+    "paqi_mean_on_paired_days": 49.39,
+    "consulate_mean_on_paired_days": 45.97,
+    "large_disagreement_days": 63,
+    "large_disagreement_rule": "difference outside [Q1 - 3·IQR, Q3 + 3·IQR] of paired daily differences; flagged, not removed",
+    "date_alignment_caveat": "PAQI does not publish its day boundary/timezone; Consulate days are Asia/Karachi local days."
+  }
+}

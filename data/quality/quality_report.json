@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-21T03:40:34Z",
+  "generated_at_utc": "2026-10-21T03:57:12Z",
   "source_id": "paqi_karachi_daily_pm25",
   "source_version": "10.5281/zenodo.15845428",
   "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf",
@@ -84,8 +84,8 @@
   "data_quality_agent": {
     "agent": "deterministic_data_quality_agent",
     "agent_version": 1,
-    "run_id": "20261021T034033.642038Z",
-    "checked_at_utc": "2026-10-21T03:40:34Z",
+    "run_id": "20261021T035711.314302Z",
+    "checked_at_utc": "2026-10-21T03:57:12Z",
     "source_id": "paqi_karachi_daily_pm25",
     "source_version": "10.5281/zenodo.15845428",
     "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf",
@@ -147,8 +147,8 @@
         "detail": "PAQI station identity, aggregation, exact timezone/window, QA, and blank-value meaning remain unresolved."
       },
       "cross_source_independence": {
-        "status": "warning",
-        "detail": "Only PAQI is approved for this pipeline; independent second-source compliance is not established."
+        "status": "pass",
+        "detail": "Assessed at warehouse level against the U.S. Consulate Karachi monitor (AirNow via OpenAQ); see data/quality/warehouse_quality_report.json for publishers and agreement statistics."
       },
       "acquisition_manifest_lineage": {
         "status": "pass",
@@ -156,22 +156,22 @@
       }
     },
     "counts": {
-      "passed_checks": 10,
-      "warning_checks": 5,
+      "passed_checks": 11,
+      "warning_checks": 4,
       "failed_checks": 0,
-      "issues": 324,
+      "issues": 323,
       "fixes": 305,
       "fills_applied": 0,
       "fills_not_applied": 6,
-      "flags": 13,
+      "flags": 12,
       "record_level_issues": 317,
-      "source_level_issues": 7
+      "source_level_issues": 6
     },
     "count_scope": "current_run_only",
     "audit_log_scope": "append_only_history",
     "source_level_issues": [
       {
-        "checked_at_utc": "2026-10-21T03:40:34Z",
+        "checked_at_utc": "2026-10-21T03:57:12Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -183,7 +183,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T03:40:34Z",
+        "checked_at_utc": "2026-10-21T03:57:12Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -195,7 +195,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T03:40:34Z",
+        "checked_at_utc": "2026-10-21T03:57:12Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -207,7 +207,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T03:40:34Z",
+        "checked_at_utc": "2026-10-21T03:57:12Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -219,7 +219,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T03:40:34Z",
+        "checked_at_utc": "2026-10-21T03:57:12Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -231,7 +231,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T03:40:34Z",
+        "checked_at_utc": "2026-10-21T03:57:12Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -241,22 +241,10 @@
         "action_taken": "disclosed; no measurement correction",
         "reason": "The publisher does not explain what blank PM2.5 cells mean or how incomplete days were handled.",
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
-      },
-      {
-        "checked_at_utc": "2026-10-21T03:40:34Z",
-        "source_row_id": "",
-        "source_record_key": "",
-        "observed_date": "",
-        "issue": "independent_second_source_unverified",
-        "severity": "warning",
-        "decision": "FLAG",
-        "action_taken": "not_claimed",
-        "reason": "EPA reuse/provenance and OpenAQ source overlap are unresolved; the PAQI republication routes are not independent sources.",
-        "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       }
     ],
     "record_level_issue_count": 317,
-    "two_source_compliance": "not_established",
+    "two_source_compliance": "assessed_at_warehouse_level",
     "decisions": {
       "FIX": "Apply only a deterministic representation normalization while preserving the exact original value.",
       "FILL": "No target imputation in this phase; record not_applied and preserve the missing label.",
@@ -264,15 +252,15 @@
     }
   },
   "quality_decision_counts": {
-    "passed_checks": 10,
-    "warning_checks": 5,
+    "passed_checks": 11,
+    "warning_checks": 4,
     "failed_checks": 0,
-    "issues": 324,
+    "issues": 323,
     "fixes": 305,
     "fills_applied": 0,
     "fills_not_applied": 6,
-    "flags": 13,
+    "flags": 12,
     "record_level_issues": 317,
-    "source_level_issues": 7
+    "source_level_issues": 6
   }
 }

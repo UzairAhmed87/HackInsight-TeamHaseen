@@ -44,7 +44,7 @@
       "publisher": "OpenAQ platform; underlying provider varies",
       "source_url": "https://api.openaq.org/v3/locations?country=PK",
       "license": "SOURCE_SPECIFIC_UNVERIFIED",
-      "request_description": "Excluded: API key unavailable and Pakistan provider/owner/source licence and PAQI overlap are unverified."
+      "request_description": "Handled outside this PAQI-only config: the U.S. Consulate Karachi monitor (OpenAQ location 8156, provider AirNow, US Public Domain) is acquired by pipeline/us_consulate.py using config/openaq_us_consulate_karachi.json."
     }
   ]
 }

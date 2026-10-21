@@ -603,6 +603,7 @@ function renderDashboard(data) {
   setSafeLink(document.getElementById("license-link"), data.source.license_url, "CC BY 4.0 licence ↗");
   text("source-license", data.source.license_summary);
   text("attribution", data.source.attribution);
+  renderSecondSource(data.warehouse || {});
   text("page-generated", `Dashboard data assembled ${data.generated_at_utc}`);
   document.getElementById("dashboard-content").hidden = false;
   document.getElementById("loading").hidden = true;
@@ -643,6 +644,24 @@ function renderInsight(result) {
     result.limitations.forEach((limitation) => list.append(element("li", "", limitation)));
     panel.append(list);
   }
+}
+
+function renderSecondSource(warehouse) {
+  const second = (warehouse.sources || []).find((item) => item.source_id === "us_consulate_karachi_pm25");
+  if (!second) {
+    text("second-source-publisher", "Second-source warehouse report is not available for this build.");
+    return;
+  }
+  text("second-source-publisher", `${second.publisher}. ${number(second.gold_rows, 0)} hourly gold rows, latest ${second.latest_observation}.`);
+  setSafeLink(document.getElementById("second-source-link"), second.access, "Open OpenAQ location record ↗");
+  text("second-source-license", `Licence: ${second.license}. Quality status: ${String(second.status).replaceAll("_", " ")}.`);
+  const cross = warehouse.cross_source || {};
+  text(
+    "cross-source-summary",
+    cross.paired_days
+      ? `Agreement with PAQI on ${number(cross.paired_days, 0)} shared days (${cross.first_paired_date} → ${cross.last_paired_date}): Pearson r = ${cross.pearson_r}, mean difference ${cross.mean_difference_paqi_minus_consulate} µg/m³ (PAQI − Consulate), ${cross.large_disagreement_days} days flagged for large disagreement.`
+      : "Cross-source agreement was not computed in this build.",
+  );
 }
 
 async function loadDashboard() {
