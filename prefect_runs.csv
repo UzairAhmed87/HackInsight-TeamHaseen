@@ -1,0 +1,2 @@
+timestamp,run_id,status,records_processed,quality_status,failed_checks,warnings,forecast_mae,duration_seconds
+2026-10-21T02:16:03.746026Z,20261021T021602.674994Z,success_with_warnings,3009,unknown,0,0,,0.91

@@ -1,0 +1,13 @@
+# HackInsight Air Quality Pakistan
+# Minimal dependencies for Hugging Face Space deployment
+
+# No external dependencies required!
+# This project uses only Python 3.12+ standard library:
+# - http.server for dashboard
+# - urllib for HTTP requests
+# - json, csv for data handling
+# - pathlib for file operations
+# - statistics for calculations
+
+# Optional: If HF Space requires any runtime dependencies, they go here
+# Currently: NONE needed for core functionality

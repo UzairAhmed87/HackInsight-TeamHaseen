@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-20T22:41:36Z",
+  "generated_at_utc": "2026-10-21T02:16:03Z",
   "source_id": "paqi_karachi_daily_pm25",
   "source_version": "10.5281/zenodo.15845428",
   "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf",
@@ -65,7 +65,7 @@
     },
     "freshness": {
       "status": "warning",
-      "detail": "Latest observation 2024-12-31; 658 days before current UTC date. A fresh fetch of this static historical dataset does not mean fresh observations."
+      "detail": "Latest observation 2024-12-31; 659 days before current UTC date. A fresh fetch of this static historical dataset does not mean fresh observations."
     }
   },
   "critical_failures": [],
@@ -84,13 +84,13 @@
   "data_quality_agent": {
     "agent": "deterministic_data_quality_agent",
     "agent_version": 1,
-    "run_id": "20261020T224135.239909Z",
-    "checked_at_utc": "2026-10-20T22:41:36Z",
+    "run_id": "20261021T021602.674994Z",
+    "checked_at_utc": "2026-10-21T02:16:03Z",
     "source_id": "paqi_karachi_daily_pm25",
     "source_version": "10.5281/zenodo.15845428",
     "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf",
     "source_observation_latest_date": "2024-12-31",
-    "source_age_days": 658,
+    "source_age_days": 659,
     "freshness_warning_days": 30,
     "status": "success_with_warnings",
     "checks": {
@@ -140,7 +140,7 @@
       },
       "source_freshness": {
         "status": "warning",
-        "detail": "Latest observation 2024-12-31; age 658 days against 30-day warning threshold."
+        "detail": "Latest observation 2024-12-31; age 659 days against 30-day warning threshold."
       },
       "measurement_methodology_documentation": {
         "status": "warning",
@@ -171,7 +171,7 @@
     "audit_log_scope": "append_only_history",
     "source_level_issues": [
       {
-        "checked_at_utc": "2026-10-20T22:41:36Z",
+        "checked_at_utc": "2026-10-21T02:16:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -183,7 +183,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-20T22:41:36Z",
+        "checked_at_utc": "2026-10-21T02:16:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -195,7 +195,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-20T22:41:36Z",
+        "checked_at_utc": "2026-10-21T02:16:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -207,7 +207,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-20T22:41:36Z",
+        "checked_at_utc": "2026-10-21T02:16:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -219,7 +219,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-20T22:41:36Z",
+        "checked_at_utc": "2026-10-21T02:16:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -231,7 +231,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-20T22:41:36Z",
+        "checked_at_utc": "2026-10-21T02:16:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -243,7 +243,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-20T22:41:36Z",
+        "checked_at_utc": "2026-10-21T02:16:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",

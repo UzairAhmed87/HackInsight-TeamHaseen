@@ -2,6 +2,12 @@
 
 Evidence-grounded historical PAQI Karachi PM2.5 research **plus** optional public AirGradient neighbourhood live sensors.
 
+**🎯 Hackathon Submission:**
+- **Hugging Face Space:** (deployment in progress)
+- **GitHub:** https://github.com/UzairAhmed87/HackInsight-TeamHaseen
+- **Tag:** v1.0-final
+- **Track:** Air Quality
+
 Live demo: https://hackinsight-air-quality-pakistan.onrender.com/
 
 ## What the dashboard shows
