@@ -244,13 +244,19 @@
           <button type="button" class="chip-button" data-question="How did the model compare with persistence on the held-out test set?">Forecast vs baseline</button>
           <button type="button" class="chip-button" data-question="What is the current air quality in Karachi?">Citywide now?</button>
           <button type="button" class="chip-button" data-question="What is the latest live sensor PM2.5 reading?">Live sensor</button>
+          <button type="button" class="chip-button" data-question="Do PAQI and the US Consulate monitor agree?">Do sources agree?</button>
         </div>
         <div class="agent-layout">
           <form id="question-form" class="panel question-panel">
             <label for="question">Ask about the dataset, quality, forecast evaluation or live sensors</label>
             <textarea id="question" name="question" maxlength="1000" rows="3" placeholder="How did the model compare with persistence on the test set?" required></textarea>
+            <label for="answer-language" class="muted">Plain-language explanation</label>
+            <select id="answer-language" name="language">
+              <option value="en">English</option>
+              <option value="ur" lang="ur">اردو (Urdu)</option>
+            </select>
             <button id="ask-button" type="submit">Ask with evidence <span aria-hidden="true">→</span></button>
-            <p class="muted">Answers cite local artifacts. Citywide “current Karachi AQI” is not inferred from one sensor.</p>
+            <p class="muted">Answers cite local artifacts. Citywide “current Karachi AQI” is not inferred from one sensor. When an LLM is configured, it only rephrases the verified answer; any output with a number not in the evidence is discarded.</p>
           </form>
           <article id="answer-panel" class="panel answer-panel" aria-live="polite" aria-busy="false">
             <p class="empty-answer">Your cited answer will appear here.</p>

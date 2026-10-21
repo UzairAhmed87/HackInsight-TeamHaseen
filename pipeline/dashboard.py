@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from pipeline import insight_agent
+from pipeline import insight_agent, llm_explainer
 from pipeline import live_sensors
 
 
@@ -422,6 +422,8 @@ def make_handler(root: Path = ROOT) -> type[BaseHTTPRequestHandler]:
                 return
             try:
                 answer = insight_agent.answer_question(question, root=root)
+                language = body.get("language") if body.get("language") in llm_explainer.LANGUAGES else "en"
+                answer["explanation"] = llm_explainer.explain(answer, language=language)
             except (insight_agent.InsightAgentError, ValueError):
                 _send_json(
                     self,

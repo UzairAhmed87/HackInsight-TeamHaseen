@@ -1844,6 +1844,29 @@ button:disabled {
   transform: none;
 }
 
+.question-panel label[for="answer-language"] {
+  margin: 14px 0 6px;
+  font-size: .8125rem;
+  font-weight: 500;
+}
+
+.question-panel select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: .9375rem;
+}
+
+[data-theme="dark"] .question-panel select {
+  background: #0f172a;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
 .question-panel .muted { 
   margin: 12px 0 0;
   font-size: .8125rem;
