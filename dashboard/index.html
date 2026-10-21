@@ -104,7 +104,7 @@
       
       <section aria-labelledby="overview-heading">
         <div class="section-heading">
-          <div><p class="eyebrow">01 / SNAPSHOT</p><h2 id="overview-heading">Historical dataset overview</h2></div>
+          <div><p class="eyebrow">01 / SNAPSHOT</p><h2 id="overview-heading">Published PAQI dataset overview</h2></div>
           <span id="pipeline-badge" class="status-badge">Pipeline status</span>
         </div>
         <div class="metrics-grid">
@@ -114,7 +114,7 @@
           <article class="metric-card metric-warning"><span class="metric-label">Missing readings</span><strong id="missing-count" class="metric-value">—</strong><span class="metric-foot">left blank; not imputed</span></article>
         </div>
         <div class="overview-footer">
-          <div><span class="inline-label">Latest historical observation</span><strong id="last-observation">—</strong><span id="stale-detail" class="muted"></span></div>
+          <div><span class="inline-label">Newest daily reading (any source)</span><strong id="last-observation">—</strong><span id="stale-detail" class="muted"></span></div>
           <div><span class="inline-label">Last recorded successful pipeline run</span><strong id="last-run">—</strong><span id="run-detail" class="muted"></span></div>
         </div>
       </section>
@@ -172,7 +172,7 @@
         </article>
         
         <article class="panel chart-panel">
-          <div class="panel-heading"><div><h3>Daily published PAQI series</h3><p>Blank source measurements appear as visible breaks, never interpolated values.</p></div></div>
+          <div class="panel-heading"><div><h3>Daily PM2.5 by source, 2016 to today</h3><p>Each source is its own line: PAQI (published, to 2024), the US Consulate monitor and the Urban Unit sensor network (updated hourly). Gaps are never interpolated.</p></div></div>
           <div id="chart-wrap" class="chart-wrap" aria-busy="true"><p class="muted">Preparing chart…</p></div>
           <div id="chart-caption" class="chart-caption"></div>
         </article>

@@ -2720,3 +2720,18 @@ footer {
     scroll-behavior: auto !important;
   }
 }
+
+.chart-series.chart-series-consulate { stroke: #f97316; filter: none; opacity: 0.85; }
+.chart-series.chart-series-network { stroke: #10b981; filter: none; }
+.chart-series.chart-series-other { stroke: #a855f7; filter: none; }
+.chart-point-other.chart-series-consulate { fill: #f97316; }
+.chart-point-other.chart-series-network { fill: #10b981; }
+.chart-point-other.chart-series-other { fill: #a855f7; }
+.chart-series-paqi { background: var(--primary); }
+.chart-point-other { stroke: none; cursor: pointer; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 0.75rem; font-size: 0.85rem; color: var(--muted); }
+.chart-legend-item { display: inline-flex; align-items: center; gap: 0.4rem; }
+.chart-legend-swatch { display: inline-block; width: 18px; height: 4px; border-radius: 2px; }
+.chart-legend-swatch.chart-series-consulate { background: #f97316; }
+.chart-legend-swatch.chart-series-network { background: #10b981; }
+.chart-legend-swatch.chart-series-other { background: #a855f7; }

@@ -23,6 +23,8 @@ EXECUTION_RELATIVE = Path("data/reports/execution_status.json")
 METRICS_RELATIVE = Path("data/reports/forecast_metrics.json")
 WAREHOUSE_RELATIVE = Path("data/quality/warehouse_quality_report.json")
 SOURCE_REGISTER_RELATIVE = Path("docs/source_register.csv")
+CONSULATE_DAILY_RELATIVE = Path("data/processed/gold_us_consulate_karachi_daily.csv")
+NETWORK_DAILY_RELATIVE = Path("data/processed/gold_urban_unit_karachi_network_daily.csv")
 MAX_QUESTION_BYTES = 4096
 SUCCESS_STATUSES = {"success", "success_with_warnings"}
 LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/"
@@ -136,6 +138,79 @@ def _read_gold(path: Path) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda row: row["date"])
 
 
+def _optional_float(raw: str | None) -> float | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        value = float(text)
+    except ValueError:
+        return None
+    return value if value >= 0 and value == value and value != float("inf") else None
+
+
+def _read_daily_csv(path: Path, value_column: str, keep_extra: tuple[str, ...]) -> list[dict[str, Any]]:
+    try:
+        with path.open(encoding="utf-8-sig", newline="") as stream:
+            reader = csv.DictReader(stream, strict=True)
+            if reader.fieldnames is None or not {"local_date", value_column}.issubset(reader.fieldnames):
+                return []
+            rows = []
+            for row in reader:
+                try:
+                    observed = date.fromisoformat(row["local_date"]).isoformat()
+                except (TypeError, ValueError):
+                    continue
+                point: dict[str, Any] = {"date": observed, "value": _optional_float(row.get(value_column))}
+                for column in keep_extra:
+                    point[column] = row.get(column, "")
+                rows.append(point)
+    except (OSError, csv.Error):
+        return []
+    return sorted(rows, key=lambda point: point["date"])
+
+
+def _extension_series(root: Path) -> list[dict[str, Any]]:
+    """Daily series from the other warehouse sources, kept separate from PAQI (never merged)."""
+    consulate = _read_daily_csv(
+        root / CONSULATE_DAILY_RELATIVE, "pm25_daily_mean_ug_m3", ("quality_flag", "valid_hours")
+    )
+    network = _read_daily_csv(
+        root / NETWORK_DAILY_RELATIVE, "network_median_pm25_ug_m3", ("sensors_with_complete_day",)
+    )
+    series = []
+    if consulate:
+        series.append(
+            {
+                "source_id": "us_consulate_karachi_pm25",
+                "label": "US Consulate Karachi (daily mean, ≥18 valid hours)",
+                "publisher": "U.S. Department of State via AirNow / OpenAQ",
+                "license": "US Public Domain",
+                "points": consulate,
+            }
+        )
+    if network:
+        series.append(
+            {
+                "source_id": "urban_unit_karachi_network",
+                "label": "Urban Unit sensor network (daily median across sensors)",
+                "publisher": "The Urban Unit via AirGradient / OpenAQ",
+                "license": "CC BY 4.0",
+                "points": network,
+            }
+        )
+    return series
+
+
+def _latest_across_sources(gold: list[dict[str, Any]], extensions: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
+    candidates = [("PAQI Karachi daily", row) for row in gold if row["value"] is not None]
+    for series in extensions:
+        candidates.extend((series["label"], point) for point in series["points"] if point["value"] is not None)
+    label, latest = max(candidates, key=lambda item: item[1]["date"])
+    age = (now.astimezone(timezone.utc).date() - date.fromisoformat(latest["date"])).days
+    return {"date": latest["date"], "value": latest["value"], "source": label, "age_days": age}
+
+
 def _year_summaries(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     import statistics
 
@@ -216,6 +291,7 @@ def build_dashboard_payload(
             "status": latest_run_status,
         }
     checks = agent_report.get("checks", {})
+    extensions = _extension_series(root)
     return {
         "generated_at_utc": now.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "overview": {
@@ -225,6 +301,7 @@ def build_dashboard_payload(
             "numeric_readings": sum(row["value"] is not None for row in gold),
             "missing_readings": len(missing),
             "freshness": _freshness(last_date, quality, now),
+            "latest_any_source": _latest_across_sources(gold, extensions, now),
             "pipeline": {
                 "latest_status": latest_run_status,
                 "latest_run_id": execution.get("run_id"),
@@ -242,8 +319,10 @@ def build_dashboard_payload(
             "series": gold,
             "yearly_summary": _year_summaries(gold),
             "missing_dates": [row["date"] for row in missing],
+            "other_series": extensions,
             "interpretation": (
-                "Published PAQI Karachi series; station identity and citywide exposure representativeness are not established."
+                f"Published PAQI Karachi series ends {last_date}; the US Consulate monitor and the Urban Unit "
+                "sensor network are drawn as separate lines and are not spliced into the PAQI series."
             ),
         },
         "quality": {
