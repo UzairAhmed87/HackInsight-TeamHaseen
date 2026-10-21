@@ -24,6 +24,10 @@ jobs:
       PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Manual and scheduled runs must start from the latest branch head, not the
+          # trigger SHA, or a queued run overwrites the previous run's prefect_runs.csv row.
+          ref: ${{ github.event_name != 'pull_request' && github.ref_name || '' }}
 
       - uses: actions/setup-python@v5
         with:
