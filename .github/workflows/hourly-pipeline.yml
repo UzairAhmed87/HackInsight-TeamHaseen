@@ -2,7 +2,7 @@ name: Hourly Data Pipeline
 
 on:
   schedule:
-    - cron: "7 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
   pull_request:
 
