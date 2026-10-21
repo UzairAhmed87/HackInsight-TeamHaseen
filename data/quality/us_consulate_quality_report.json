@@ -6,8 +6,8 @@
   "access_platform": "OpenAQ API v3 (provider: AirNow)",
   "license": "US Public Domain",
   "attribution": "U.S. Department of State / U.S. EPA AirNow, U.S. Consulate General Karachi monitor, accessed via OpenAQ (openaq.org). Identify modifications; do not imply endorsement.",
-  "run_id": "20261021T035711.314302Z",
-  "checked_at_utc": "2026-10-21T03:57:11Z",
+  "run_id": "20261021T040511.255136Z",
+  "checked_at_utc": "2026-10-21T04:05:11Z",
   "status": "success_with_warnings",
   "quality_status": "passed_with_warnings",
   "raw_record_count": 46937,
@@ -78,7 +78,7 @@
   },
   "decision_log": [
     {
-      "checked_at_utc": "2026-10-21T03:57:11Z",
+      "checked_at_utc": "2026-10-21T04:05:11Z",
       "source_row_id": "",
       "source_record_key": "",
       "observed_date": "",
@@ -90,7 +90,7 @@
       "source_file_sha256": ""
     },
     {
-      "checked_at_utc": "2026-10-21T03:57:11Z",
+      "checked_at_utc": "2026-10-21T04:05:11Z",
       "source_row_id": "",
       "source_record_key": "",
       "observed_date": "",
@@ -102,7 +102,7 @@
       "source_file_sha256": ""
     },
     {
-      "checked_at_utc": "2026-10-21T03:57:11Z",
+      "checked_at_utc": "2026-10-21T04:05:11Z",
       "source_row_id": "",
       "source_record_key": "",
       "observed_date": "",
@@ -114,7 +114,7 @@
       "source_file_sha256": ""
     },
     {
-      "checked_at_utc": "2026-10-21T03:57:11Z",
+      "checked_at_utc": "2026-10-21T04:05:11Z",
       "source_row_id": "",
       "source_record_key": "",
       "observed_date": "",
@@ -126,7 +126,7 @@
       "source_file_sha256": ""
     },
     {
-      "checked_at_utc": "2026-10-21T03:57:11Z",
+      "checked_at_utc": "2026-10-21T04:05:11Z",
       "source_row_id": "",
       "source_record_key": "",
       "observed_date": "",
@@ -138,7 +138,7 @@
       "source_file_sha256": ""
     },
     {
-      "checked_at_utc": "2026-10-21T03:57:11Z",
+      "checked_at_utc": "2026-10-21T04:05:11Z",
       "source_row_id": "",
       "source_record_key": "",
       "observed_date": "",

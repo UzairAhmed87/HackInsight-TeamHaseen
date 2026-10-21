@@ -1,9 +1,11 @@
 {
-  "generated_at_utc": "2026-10-21T03:57:11Z",
-  "run_id": "20261021T035711.314302Z",
+  "generated_at_utc": "2026-10-21T04:05:11Z",
+  "run_id": "20261021T040511.255136Z",
   "status": "success_with_warnings",
   "two_source_compliance": "established",
-  "total_gold_rows": 49946,
+  "total_gold_rows": 115146,
+  "latest_observation_utc": "2026-10-21T03:00:00Z",
+  "latest_observation_age_hours": 1.1,
   "sources": [
     {
       "source_id": "paqi_karachi_daily_pm25",
@@ -27,6 +29,19 @@
       "status": "success_with_warnings",
       "latest_observation": "2025-03-04T12:00:00Z",
       "quality_report": "data/quality/us_consulate_quality_report.json"
+    },
+    {
+      "source_id": "urban_unit_karachi_airgradient_pm25",
+      "publisher": "The Urban Unit (sensor owner) with AirGradient (instrument provider)",
+      "access": "https://explore.openaq.org/",
+      "license": "CC BY 4.0",
+      "resolution": "hourly, 8 sensors (daily means derived)",
+      "gold_rows": 65200,
+      "daily_gold_rows": 2934,
+      "status": "success_with_warnings",
+      "latest_observation": "2026-10-21T03:00:00Z",
+      "latest_age_hours": 1.1,
+      "quality_report": "data/quality/urban_unit_quality_report.json"
     }
   ],
   "checks": {

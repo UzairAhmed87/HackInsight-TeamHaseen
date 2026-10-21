@@ -662,6 +662,15 @@ function renderSecondSource(warehouse) {
       ? `Agreement with PAQI on ${number(cross.paired_days, 0)} shared days (${cross.first_paired_date} → ${cross.last_paired_date}): Pearson r = ${cross.pearson_r}, mean difference ${cross.mean_difference_paqi_minus_consulate} µg/m³ (PAQI − Consulate), ${cross.large_disagreement_days} days flagged for large disagreement.`
       : "Cross-source agreement was not computed in this build.",
   );
+  const network = (warehouse.sources || []).find((item) => item.source_id === "urban_unit_karachi_airgradient_pm25");
+  if (!network) return;
+  text("network-source-publisher", `${network.publisher}. ${number(network.gold_rows, 0)} hourly gold rows (${network.resolution}).`);
+  setSafeLink(document.getElementById("network-source-link"), network.access, "Open OpenAQ explorer ↗");
+  text("network-source-license", `Licence: ${network.license}. Quality status: ${String(network.status).replaceAll("_", " ")}.`);
+  text(
+    "network-source-freshness",
+    `Latest hour in warehouse: ${network.latest_observation} (${number(network.latest_age_hours, 1)} h old when the pipeline last ran). Warehouse total: ${number(warehouse.total_gold_rows, 0)} gold rows across ${(warehouse.sources || []).length} sources.`,
+  );
 }
 
 async function loadDashboard() {

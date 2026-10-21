@@ -54,7 +54,8 @@ class DashboardPayloadTests(unittest.TestCase):
         self.assertIn("unresolved", quality["unresolved_methodology"])
         self.assertEqual(quality["two_source_compliance"], "established")
         warehouse = payload["warehouse"]
-        self.assertEqual({item["source_id"] for item in warehouse["sources"]}, {"paqi_karachi_daily_pm25", "us_consulate_karachi_pm25"})
+        self.assertEqual({item["source_id"] for item in warehouse["sources"]}, {"paqi_karachi_daily_pm25", "us_consulate_karachi_pm25", "urban_unit_karachi_airgradient_pm25"})
+        self.assertGreater(warehouse["total_gold_rows"], 100000)
         self.assertGreater(warehouse["cross_source"]["paired_days"], 1000)
 
     def test_payload_forecast_has_validation_and_held_out_test_provenance(self) -> None:

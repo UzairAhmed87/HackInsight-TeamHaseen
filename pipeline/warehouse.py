@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from pipeline import run as paqi
-from pipeline import us_consulate
+from pipeline import urban_unit, us_consulate
 from pipeline.run import atomic_csv, atomic_json, utc_text
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -116,6 +116,7 @@ def run_warehouse(root: Path = ROOT, *, now: datetime | None = None) -> tuple[in
     paqi_code, paqi_status = paqi.run_pipeline(root)
     run_id = paqi_status.get("run_id", "")
     consulate_code, consulate_report = us_consulate.run_source_pipeline(root, run_id=run_id, now=now)
+    network_code, network_report = urban_unit.run_source_pipeline(root, run_id=run_id, now=now)
 
     checks: dict[str, Any] = {}
     agreement: dict[str, Any] = {}
@@ -165,15 +166,30 @@ def run_warehouse(root: Path = ROOT, *, now: datetime | None = None) -> tuple[in
             "latest_observation": consulate_report.get("last_observation_utc"),
             "quality_report": "data/quality/us_consulate_quality_report.json",
         },
+        {
+            "source_id": network_report.get("source_id"),
+            "publisher": network_report.get("original_publisher"),
+            "access": "https://explore.openaq.org/",
+            "license": network_report.get("license"),
+            "resolution": f"hourly, {network_report.get('sensors')} sensors (daily means derived)",
+            "gold_rows": network_report.get("hourly_gold_rows"),
+            "daily_gold_rows": network_report.get("sensor_daily_rows"),
+            "status": network_report.get("status"),
+            "latest_observation": network_report.get("last_observation_utc"),
+            "latest_age_hours": network_report.get("latest_age_hours"),
+            "quality_report": "data/quality/urban_unit_quality_report.json",
+        },
     ]
     statuses = [check["status"] for check in checks.values()]
-    failed = paqi_code != 0 or consulate_code != 0 or "fail" in statuses
+    failed = paqi_code != 0 or consulate_code != 0 or network_code != 0 or "fail" in statuses
     report = {
         "generated_at_utc": utc_text(now),
         "run_id": run_id,
         "status": "failure" if failed else "success_with_warnings",
         "two_source_compliance": "established" if not failed else "not_established",
         "total_gold_rows": sum(int(source["gold_rows"] or 0) for source in sources),
+        "latest_observation_utc": network_report.get("last_observation_utc"),
+        "latest_observation_age_hours": network_report.get("latest_age_hours"),
         "sources": sources,
         "checks": checks,
         "cross_source": agreement,

@@ -35,8 +35,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: data/raw
-          key: raw-${{ hashFiles('config/sources.json') }}-${{ github.run_id }}
-          restore-keys: raw-${{ hashFiles('config/sources.json') }}-
+          key: raw-${{ hashFiles('config/*.json') }}-${{ github.run_id }}
+          restore-keys: raw-${{ hashFiles('config/*.json') }}-
 
       - name: Install orchestration dependencies
         run: pip install -r requirements-pipeline.txt
