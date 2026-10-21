@@ -58,6 +58,16 @@ class DashboardPayloadTests(unittest.TestCase):
         self.assertGreater(warehouse["total_gold_rows"], 100000)
         self.assertGreater(warehouse["cross_source"]["paired_days"], 1000)
 
+    def test_payload_insights_cover_seasonality_agreement_and_network(self) -> None:
+        payload = dashboard.build_dashboard_payload(self.root, now=self.now)
+        insights = payload["insights"]
+        self.assertEqual(len(insights["seasonal"]), 3)
+        for source in insights["seasonal"]:
+            self.assertEqual([month["month"] for month in source["months"]], list(range(1, 13)))
+        self.assertEqual(len(insights["agreement"]), payload["warehouse"]["cross_source"]["paired_days"])
+        self.assertNotIn("row_ids", insights["network"]["latest_hour"])
+        self.assertIn("winter_dec_feb", payload["forecast"]["by_season"])
+
     def test_payload_extends_history_past_paqi_with_separate_source_series(self) -> None:
         payload = dashboard.build_dashboard_payload(self.root, now=self.now)
         paqi_end = payload["historical"]["series"][-1]["date"]

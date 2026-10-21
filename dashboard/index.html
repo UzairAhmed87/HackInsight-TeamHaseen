@@ -18,6 +18,7 @@
     <nav aria-label="Primary navigation">
       <a href="#live">Live sensors</a>
       <a href="#history">History</a>
+      <a href="#patterns">Patterns</a>
       <a href="#forecast">Forecast</a>
       <a href="#insight">Ask</a>
       <a href="#method">How it works</a>
@@ -46,7 +47,33 @@
     <div id="error" class="state-card error-card" role="alert" hidden></div>
 
     <div id="dashboard-content" hidden>
-      
+      <section class="glance" aria-labelledby="glance-heading">
+        <h2 id="glance-heading" class="sr-only">Karachi at a glance</h2>
+        <div class="glance-grid">
+          <article class="glance-card glance-primary">
+            <span class="glance-label">Sensor network · latest hour</span>
+            <strong class="glance-value"><span id="glance-network-value">—</span><small> µg/m³</small></strong>
+            <span class="glance-category" id="glance-network-category"></span>
+            <span class="glance-foot" id="glance-network-foot">—</span>
+          </article>
+          <article class="glance-card">
+            <span class="glance-label">Warehouse</span>
+            <strong class="glance-value" id="glance-rows">—</strong>
+            <span class="glance-foot" id="glance-rows-foot">gold rows across sources</span>
+          </article>
+          <article class="glance-card">
+            <span class="glance-label">Do sources agree?</span>
+            <strong class="glance-value" id="glance-agreement">—</strong>
+            <span class="glance-foot" id="glance-agreement-foot">PAQI vs US Consulate</span>
+          </article>
+          <article class="glance-card">
+            <span class="glance-label">Last pipeline run</span>
+            <strong class="glance-value glance-value-small" id="glance-run">—</strong>
+            <span class="glance-foot" id="glance-run-foot">hourly Prefect flow</span>
+          </article>
+        </div>
+      </section>
+
       <!-- Health Recommendation Widget -->
       <div class="health-widget" id="health-widget">
         <div class="health-widget-header">
@@ -188,9 +215,34 @@
         <p class="callout"><strong>Interpretation:</strong> Each source is summarised separately. PAQI is a published series that ends in 2024; the US Consulate monitor stopped reporting in March 2025; the Urban Unit network is a median of neighbourhood sensors and is not a citywide average.</p>
       </section>
 
+      <section id="patterns" aria-labelledby="patterns-heading">
+        <div class="section-heading">
+          <div><p class="eyebrow">04 / INSIGHTS</p><h2 id="patterns-heading">Patterns in the data</h2></div>
+          <span class="unit-chip">µg/m³</span>
+        </div>
+        <p class="section-intro">What the three independent sources show when they are read side by side.</p>
+        <div class="patterns-grid">
+          <article class="panel pattern-panel pattern-wide">
+            <div class="panel-heading"><div><h3>Karachi's pollution season</h3><p id="seasonal-subtitle">Average daily PM2.5 by calendar month, per source.</p></div></div>
+            <div id="seasonal-chart" class="mini-chart"></div>
+            <p id="seasonal-takeaway" class="pattern-takeaway"></p>
+          </article>
+          <article class="panel pattern-panel">
+            <div class="panel-heading"><div><h3>Two sources, one signal</h3><p>Each dot is a day with both a PAQI value and a complete US Consulate daily mean.</p></div></div>
+            <div id="agreement-chart" class="mini-chart"></div>
+            <p id="agreement-takeaway" class="pattern-takeaway"></p>
+          </article>
+          <article class="panel pattern-panel">
+            <div class="panel-heading"><div><h3>Across the sensor network</h3><p id="network-subtitle">Latest hour in the warehouse, one bar per reporting sensor.</p></div></div>
+            <div id="network-chart" class="bar-list"></div>
+            <p id="network-takeaway" class="pattern-takeaway"></p>
+          </article>
+        </div>
+      </section>
+
       <section id="quality" aria-labelledby="quality-heading">
         <div class="section-heading">
-          <div><p class="eyebrow">04 / TRUST & LIMITATIONS</p><h2 id="quality-heading">Data quality</h2></div>
+          <div><p class="eyebrow">05 / TRUST & LIMITATIONS</p><h2 id="quality-heading">Data quality</h2></div>
           <span id="quality-badge" class="status-badge">Quality status</span>
         </div>
         <div class="quality-layout">
@@ -214,17 +266,22 @@
 
       <section id="forecast" aria-labelledby="forecast-heading">
         <div class="section-heading">
-          <div><p class="eyebrow">05 / HISTORICAL BACKTEST</p><h2 id="forecast-heading">Forecast evaluation</h2></div>
+          <div><p class="eyebrow">06 / HISTORICAL BACKTEST</p><h2 id="forecast-heading">Forecast evaluation</h2></div>
           <span class="status-badge status-neutral">Not a live forecast</span>
         </div>
         <p class="section-intro">Chronological validation and held-out test results. Lower MAE/RMSE is better. Persistence comparison uses matched dates. This does not observe 2025–2026 conditions.</p>
         <div id="forecast-cards" class="forecast-grid"></div>
+        <article class="panel season-error-panel">
+          <div class="panel-heading"><div><h3>Where the model helps, and where it does not</h3><p>Held-out test MAE by season (lower is better). Model vs persistence on the same days.</p></div></div>
+          <div id="season-error-chart" class="bar-list"></div>
+          <p id="interval-note" class="pattern-takeaway"></p>
+        </article>
         <p id="forecast-caveat" class="callout"></p>
       </section>
 
       <section id="health" aria-labelledby="health-heading">
         <div class="section-heading">
-          <div><p class="eyebrow">06 / CONTEXT</p><h2 id="health-heading">PM2.5 &amp; health context</h2></div>
+          <div><p class="eyebrow">07 / CONTEXT</p><h2 id="health-heading">PM2.5 &amp; health context</h2></div>
         </div>
         <article class="panel health-panel">
           <h3 id="health-title">Understanding PM2.5</h3>
@@ -236,7 +293,7 @@
 
       <section id="insight" aria-labelledby="insight-heading">
         <div class="section-heading">
-          <div><p class="eyebrow">07 / EVIDENCE Q&amp;A</p><h2 id="insight-heading">Ask the Insight Agent</h2></div>
+          <div><p class="eyebrow">08 / EVIDENCE Q&amp;A</p><h2 id="insight-heading">Ask the Insight Agent</h2></div>
           <span class="unit-chip">Local · deterministic</span>
         </div>
         <div class="example-questions" aria-label="Example questions">
@@ -246,18 +303,20 @@
           <button type="button" class="chip-button" data-question="What is the current air quality in Karachi?">Citywide now?</button>
           <button type="button" class="chip-button" data-question="What is the latest live sensor PM2.5 reading?">Live sensor</button>
           <button type="button" class="chip-button" data-question="Do PAQI and the US Consulate monitor agree?">Do sources agree?</button>
+          <button type="button" class="chip-button chip-urdu" lang="ur" dir="rtl" data-question="کیا ذرائع متفق ہیں؟" data-language="ur">کیا ذرائع متفق ہیں؟</button>
+          <button type="button" class="chip-button chip-urdu" lang="ur" dir="rtl" data-question="ماڈل کی پیشگوئی کتنی درست ہے؟" data-language="ur">پیشگوئی کتنی درست ہے؟</button>
         </div>
         <div class="agent-layout">
           <form id="question-form" class="panel question-panel">
             <label for="question">Ask about the dataset, quality, forecast evaluation or live sensors</label>
             <textarea id="question" name="question" maxlength="1000" rows="3" placeholder="How did the model compare with persistence on the test set?" required></textarea>
-            <label for="answer-language" class="muted">Plain-language explanation</label>
+            <label for="answer-language" class="muted">Answer language · جواب کی زبان</label>
             <select id="answer-language" name="language">
               <option value="en">English</option>
               <option value="ur" lang="ur">اردو (Urdu)</option>
             </select>
             <button id="ask-button" type="submit">Ask with evidence <span aria-hidden="true">→</span></button>
-            <p class="muted">Answers cite local artifacts. Citywide “current Karachi AQI” is not inferred from one sensor. When an LLM is configured, it only rephrases the verified answer; any output with a number not in the evidence is discarded.</p>
+            <p class="muted">Answers cite local artifacts. Citywide “current Karachi AQI” is not inferred from one sensor. Urdu answers use the same verified numbers as English. When an LLM is configured, it only rephrases the verified answer; any output with a number not in the evidence is discarded.</p>
           </form>
           <article id="answer-panel" class="panel answer-panel" aria-live="polite" aria-busy="false">
             <p class="empty-answer">Your cited answer will appear here.</p>
@@ -267,14 +326,14 @@
 
       <section id="method" aria-labelledby="method-heading">
         <div class="section-heading">
-          <div><p class="eyebrow">08 / DEMO FLOW</p><h2 id="method-heading">How it works</h2></div>
+          <div><p class="eyebrow">09 / DEMO FLOW</p><h2 id="method-heading">How it works</h2></div>
         </div>
         <ol id="how-it-works" class="method-list"></ol>
       </section>
 
       <section id="sources" aria-labelledby="sources-heading">
         <div class="section-heading">
-          <div><p class="eyebrow">09 / PROVENANCE</p><h2 id="sources-heading">Sources &amp; limitations</h2></div>
+          <div><p class="eyebrow">10 / PROVENANCE</p><h2 id="sources-heading">Sources &amp; limitations</h2></div>
         </div>
         <article class="panel source-panel">
           <h3 id="source-name">PAQI Karachi daily PM2.5 dataset</h3>
@@ -327,6 +386,10 @@
         <h3>Insight Agent</h3>
         <p>Ask about data, quality, or forecast</p>
       </div>
+      <div class="lang-toggle" role="group" aria-label="Answer language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="ur" lang="ur" aria-pressed="false">اردو</button>
+      </div>
       <button class="chat-widget-close" id="chat-widget-close" aria-label="Close chat">×</button>
     </div>
     
@@ -337,6 +400,7 @@
         <button class="chat-widget-example-btn" data-question="How many PM2.5 readings are missing?">📉 Missing values</button>
         <button class="chat-widget-example-btn" data-question="How did the model compare with persistence on the held-out test set?">🎯 Forecast vs baseline</button>
         <button class="chat-widget-example-btn" data-question="What is the latest live sensor PM2.5 reading?">🔴 Live sensor data</button>
+        <button class="chat-widget-example-btn" lang="ur" dir="rtl" data-question="کراچی کی ہوا ابھی کیسی ہے؟">🌫️ کراچی کی ہوا ابھی کیسی ہے؟</button>
       </div>
     </div>
     
