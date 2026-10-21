@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,31 @@ class InsightAgentTests(unittest.TestCase):
 
     def ask(self, question: str) -> dict:
         return insight_agent.answer_question(question, root=self.root, now=self.now)
+
+    def test_urdu_questions_route_like_their_english_equivalents(self) -> None:
+        cases = {
+            "کیا ذرائع متفق ہیں؟": "cross_source",
+            "ماڈل کی پیشگوئی کتنی درست ہے؟": "forecast",
+            "کتنی قدریں غائب ہیں؟": "quality",
+            "کتنے ذرائع ہیں؟": "warehouse",
+            "آلودگی کی وجہ کیا ہے؟": "causal",
+            "سال بہ سال اوسط": "yearly",
+        }
+        for question, route in cases.items():
+            self.assertEqual(insight_agent._classify(question), route, question)
+
+    def test_urdu_answer_carries_the_same_numbers_as_english(self) -> None:
+        for question in ("Do PAQI and the US Consulate monitor agree?", "Did the model beat persistence?", "How many readings are missing?"):
+            result = self.ask(question)
+            english_numbers = set(re.findall(r"(?<![A-Za-z])\d+(?:[.,]\d+)*", result["answer"]))
+            urdu_numbers = set(re.findall(r"(?<![A-Za-z])\d+(?:[.,]\d+)*", result["answer_ur"]))
+            self.assertTrue(english_numbers, question)
+            self.assertEqual(english_numbers - urdu_numbers, set(), question)
+
+    def test_urdu_abstention_is_explicit(self) -> None:
+        result = self.ask("آلودگی کی وجہ کیا ہے؟")
+        self.assertEqual(result["status"], "abstained")
+        self.assertTrue(result["answer_ur"].startswith(insight_agent.ABSTENTION_UR))
 
     def test_date_range_and_observation_count_are_grounded_in_gold(self) -> None:
         result = self.ask("What date range and how many observations are available?")

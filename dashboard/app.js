@@ -603,6 +603,260 @@ function renderHowItWorks(steps) {
   });
 }
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const SOURCE_COLORS = {
+  paqi: "var(--primary)",
+  us_consulate_karachi_pm25: "#f97316",
+  urban_unit_karachi_network: "#10b981",
+};
+const WHO_24H_GUIDELINE = 15;
+
+function svgEl(tag, attrs = {}, content) {
+  const node = document.createElementNS(SVG_NS, tag);
+  Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+  if (content !== undefined) node.textContent = String(content);
+  return node;
+}
+
+function aqiColor(value) {
+  if (value <= 12) return "#10b981";
+  if (value <= 35.4) return "#eab308";
+  if (value <= 55.4) return "#f97316";
+  if (value <= 150.4) return "#ef4444";
+  if (value <= 250.4) return "#9333ea";
+  return "#7f1d1d";
+}
+
+function renderGlance(data) {
+  const network = (data.insights || {}).network || {};
+  const hour = network.latest_hour || {};
+  const value = hour.median_pm25_ug_m3;
+  text("glance-network-value", typeof value === "number" ? number(value, 1) : "—");
+  const category = typeof value === "number" ? getAQIInfo(value) : null;
+  const chip = document.getElementById("glance-network-category");
+  if (chip) {
+    chip.textContent = category ? `${category.icon} ${category.category}` : "";
+    chip.style.background = typeof value === "number" ? aqiColor(value) : "transparent";
+  }
+  text(
+    "glance-network-foot",
+    hour.datetime_to_utc
+      ? `Median of ${hour.sensors_reporting} of ${hour.sensors_configured} Urban Unit sensors · hour ending ${hour.datetime_to_utc.replace("T", " ").replace(":00Z", " UTC")}`
+      : "No network hour available in this build",
+  );
+  const warehouse = data.warehouse || {};
+  text("glance-rows", integer(warehouse.total_gold_rows));
+  text("glance-rows-foot", `gold rows across ${(warehouse.sources || []).length} independent sources`);
+  const cross = warehouse.cross_source || {};
+  text("glance-agreement", typeof cross.pearson_r === "number" ? `r = ${number(cross.pearson_r, 2)}` : "—");
+  text(
+    "glance-agreement-foot",
+    cross.paired_days ? `PAQI vs US Consulate on ${integer(cross.paired_days)} shared days` : "Cross-source check not available",
+  );
+  const pipeline = data.overview.pipeline || {};
+  const finished = pipeline.latest_finished_at_utc || "";
+  text("glance-run", finished ? finished.replace("T", " ").replace("Z", " UTC") : "—");
+  text("glance-run-foot", `${String(pipeline.latest_status || "unknown").replaceAll("_", " ")} · hourly Prefect flow`);
+}
+
+function chartFrame(width, height) {
+  const svg = svgEl("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", class: "pattern-svg" });
+  return svg;
+}
+
+function renderSeasonal(seasonal) {
+  const wrap = document.getElementById("seasonal-chart");
+  if (!wrap) return;
+  wrap.replaceChildren();
+  const series = (seasonal || []).filter((item) => item.months.some((month) => typeof month.mean === "number"));
+  if (!series.length) {
+    wrap.append(element("p", "muted", "No monthly profile available."));
+    return;
+  }
+  const width = 760;
+  const height = 280;
+  const margin = { top: 16, right: 20, bottom: 34, left: 44 };
+  const plotW = width - margin.left - margin.right;
+  const plotH = height - margin.top - margin.bottom;
+  const maxValue = Math.ceil(Math.max(...series.flatMap((item) => item.months.map((month) => month.mean || 0))) / 20) * 20;
+  const xAt = (month) => margin.left + ((month - 1) / 11) * plotW;
+  const yAt = (value) => margin.top + (1 - value / maxValue) * plotH;
+  const svg = chartFrame(width, height);
+  svg.setAttribute("aria-label", "Average daily PM2.5 by calendar month for each source");
+  [[margin.left, xAt(2.5)], [xAt(10.5), width - margin.right]].forEach(([start, end]) => {
+    svg.append(svgEl("rect", { x: start, y: margin.top, width: end - start, height: plotH, class: "season-band" }));
+  });
+  for (let tick = 0; tick <= 4; tick += 1) {
+    const value = (maxValue / 4) * tick;
+    svg.append(svgEl("line", { x1: margin.left, x2: width - margin.right, y1: yAt(value), y2: yAt(value), class: "chart-gridline" }));
+    svg.append(svgEl("text", { x: margin.left - 8, y: yAt(value) + 4, "text-anchor": "end", class: "chart-axis-label" }, number(value, 0)));
+  }
+  svg.append(svgEl("line", { x1: margin.left, x2: width - margin.right, y1: yAt(WHO_24H_GUIDELINE), y2: yAt(WHO_24H_GUIDELINE), class: "guideline" }));
+  svg.append(svgEl("text", { x: width - margin.right, y: yAt(WHO_24H_GUIDELINE) - 6, "text-anchor": "end", class: "guideline-label" }, "WHO 24-hour guideline (15)"));
+  MONTHS.forEach((label, index) => {
+    svg.append(svgEl("text", { x: xAt(index + 1), y: height - 10, "text-anchor": "middle", class: "chart-axis-label" }, label));
+  });
+  series.forEach((item) => {
+    const color = SOURCE_COLORS[item.source_id] || "#a855f7";
+    const points = item.months.filter((month) => typeof month.mean === "number");
+    svg.append(svgEl("polyline", {
+      points: points.map((month) => `${xAt(month.month).toFixed(1)},${yAt(month.mean).toFixed(1)}`).join(" "),
+      fill: "none",
+      stroke: color,
+      "stroke-width": 3,
+      "stroke-linejoin": "round",
+      "stroke-linecap": "round",
+    }));
+    points.forEach((month) => {
+      const dot = svgEl("circle", { cx: xAt(month.month), cy: yAt(month.mean), r: 4.5, fill: color, class: "pattern-dot" });
+      dot.append(svgEl("title", {}, `${item.label} · ${MONTHS[month.month - 1]}: ${number(month.mean, 1)} µg/m³ (n=${month.n} days)`));
+      svg.append(dot);
+    });
+  });
+  wrap.append(svg);
+  const legend = element("div", "chart-legend");
+  series.forEach((item) => {
+    const entry = element("span", "chart-legend-item");
+    const swatch = element("span", "chart-legend-swatch");
+    swatch.style.background = SOURCE_COLORS[item.source_id] || "#a855f7";
+    entry.append(swatch, document.createTextNode(item.label));
+    legend.append(entry);
+  });
+  const band = element("span", "chart-legend-item");
+  band.append(element("span", "chart-legend-swatch season-band-swatch"), document.createTextNode("Nov–Feb"));
+  legend.append(band);
+  wrap.append(legend);
+  const reference = series[0].months;
+  const winter = [12, 1].map((m) => reference[m - 1].mean).filter((v) => typeof v === "number");
+  const monsoon = [7, 8].map((m) => reference[m - 1].mean).filter((v) => typeof v === "number");
+  if (winter.length && monsoon.length) {
+    const winterMean = winter.reduce((a, b) => a + b, 0) / winter.length;
+    const monsoonMean = monsoon.reduce((a, b) => a + b, 0) / monsoon.length;
+    text(
+      "seasonal-takeaway",
+      `All ${series.length} sources show the same cycle: December–January averages about ${number(winterMean / monsoonMean, 1)}× the July–August level in the PAQI series (${number(winterMean, 0)} vs ${number(monsoonMean, 0)} µg/m³). Even the cleanest months sit above the WHO 24-hour guideline.`,
+    );
+  }
+}
+
+function renderAgreement(points, cross) {
+  const wrap = document.getElementById("agreement-chart");
+  if (!wrap) return;
+  wrap.replaceChildren();
+  if (!points || !points.length) {
+    wrap.append(element("p", "muted", "Cross-source pairs are not available in this build."));
+    return;
+  }
+  const size = 360;
+  const margin = { top: 12, right: 14, bottom: 40, left: 46 };
+  const plot = size - margin.left - margin.right;
+  const maxValue = Math.ceil(Math.max(...points.map((p) => Math.max(p.paqi, p.consulate))) / 50) * 50;
+  const xAt = (value) => margin.left + (value / maxValue) * plot;
+  const yAt = (value) => margin.top + (1 - value / maxValue) * (size - margin.top - margin.bottom);
+  const svg = chartFrame(size, size);
+  svg.setAttribute("aria-label", "Scatter plot of PAQI daily PM2.5 against US Consulate daily mean");
+  for (let tick = 0; tick <= 4; tick += 1) {
+    const value = (maxValue / 4) * tick;
+    svg.append(svgEl("line", { x1: margin.left, x2: size - margin.right, y1: yAt(value), y2: yAt(value), class: "chart-gridline" }));
+    svg.append(svgEl("text", { x: margin.left - 8, y: yAt(value) + 4, "text-anchor": "end", class: "chart-axis-label" }, number(value, 0)));
+    svg.append(svgEl("text", { x: xAt(value), y: size - margin.bottom + 16, "text-anchor": "middle", class: "chart-axis-label" }, number(value, 0)));
+  }
+  svg.append(svgEl("line", { x1: xAt(0), y1: yAt(0), x2: xAt(maxValue), y2: yAt(maxValue), class: "identity-line" }));
+  points.forEach((point) => {
+    svg.append(svgEl("circle", { cx: xAt(point.consulate).toFixed(1), cy: yAt(point.paqi).toFixed(1), r: 2.4, class: "scatter-dot" }));
+  });
+  svg.append(svgEl("text", { x: margin.left + plot / 2, y: size - 6, "text-anchor": "middle", class: "axis-title" }, "US Consulate daily mean (µg/m³)"));
+  const yTitle = svgEl("text", { x: 12, y: margin.top + plot / 2, "text-anchor": "middle", class: "axis-title", transform: `rotate(-90 12 ${margin.top + plot / 2})` }, "PAQI (µg/m³)");
+  svg.append(yTitle);
+  wrap.append(svg);
+  if (cross && cross.paired_days) {
+    text(
+      "agreement-takeaway",
+      `Pearson r = ${number(cross.pearson_r, 2)} over ${integer(cross.paired_days)} days. Dots hug the dashed 1:1 line; PAQI runs ${number(cross.mean_difference_paqi_minus_consulate, 1)} µg/m³ higher on average, and ${integer(cross.large_disagreement_days)} days are flagged for large disagreement.`,
+    );
+  }
+}
+
+function renderBars(containerId, rows, { maxValue, unit = "µg/m³", colorFor, marker } = {}) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  wrap.replaceChildren();
+  if (!rows.length) {
+    wrap.append(element("p", "muted", "No values available."));
+    return;
+  }
+  const top = maxValue || Math.max(...rows.flatMap((row) => row.values.map((item) => item.value)));
+  rows.forEach((row) => {
+    const line = element("div", "bar-row");
+    line.append(element("span", "bar-label", row.label));
+    const track = element("div", "bar-track");
+    row.values.forEach((item) => {
+      const bar = element("div", `bar-fill ${item.className || ""}`);
+      bar.style.width = `${Math.max(2, (item.value / top) * 100)}%`;
+      bar.style.background = item.color || (colorFor ? colorFor(item.value) : "var(--primary)");
+      bar.title = `${row.label}${item.name ? ` · ${item.name}` : ""}: ${number(item.value, 1)} ${unit}`;
+      bar.append(element("span", "bar-value", `${item.name ? `${item.name} ` : ""}${number(item.value, 1)}`));
+      track.append(bar);
+    });
+    if (marker) {
+      const tick = element("div", "bar-marker");
+      tick.style.left = `${(marker.value / top) * 100}%`;
+      tick.title = marker.label;
+      track.append(tick);
+    }
+    line.append(track);
+    wrap.append(line);
+  });
+}
+
+function renderNetwork(network) {
+  const hour = (network || {}).latest_hour || {};
+  const bySensor = Object.entries(hour.by_sensor || {}).sort((a, b) => b[1] - a[1]);
+  renderBars(
+    "network-chart",
+    bySensor.map(([name, value]) => ({ label: name, values: [{ value }] })),
+    { colorFor: aqiColor, marker: typeof hour.median_pm25_ug_m3 === "number" ? { value: hour.median_pm25_ug_m3, label: `Network median ${hour.median_pm25_ug_m3}` } : null },
+  );
+  if (hour.datetime_to_utc) {
+    text("network-subtitle", `Hour ending ${hour.datetime_to_utc.replace("T", " ").replace(":00Z", " UTC")} · ${hour.sensors_reporting} of ${hour.sensors_configured} sensors reporting. The thin line marks the network median.`);
+    text(
+      "network-takeaway",
+      `Readings span ${number(hour.min_pm25_ug_m3, 1)}–${number(hour.max_pm25_ug_m3, 1)} µg/m³ across neighbourhoods in the same hour, which is why a single sensor is never presented as a citywide value.`,
+    );
+  }
+}
+
+const SEASON_LABELS = {
+  winter_dec_feb: "Winter (Dec–Feb)",
+  pre_monsoon_mar_may: "Pre-monsoon (Mar–May)",
+  monsoon_jun_sep: "Monsoon (Jun–Sep)",
+  post_monsoon_oct_nov: "Post-monsoon (Oct–Nov)",
+};
+
+function renderSeasonErrors(forecast) {
+  const bySeason = forecast.by_season || {};
+  const rows = Object.keys(SEASON_LABELS)
+    .filter((key) => bySeason[key])
+    .map((key) => ({
+      label: `${SEASON_LABELS[key]} · n=${bySeason[key].n}`,
+      values: [
+        { name: "Model", value: bySeason[key].linear_model.mae, color: "var(--primary)" },
+        { name: "Persistence", value: bySeason[key].persistence.mae, color: "#94a3b8" },
+      ],
+    }));
+  renderBars("season-error-chart", rows, {});
+  document.querySelectorAll("#season-error-chart .bar-track").forEach((track) => track.classList.add("bar-track-stacked"));
+  const interval = forecast.interval || {};
+  const quantiles = interval.residual_quantiles || {};
+  if (typeof interval.test_coverage === "number") {
+    text(
+      "interval-note",
+      `Uncertainty: a 90% band from validation errors (${number(quantiles.lower_5_percent, 1)} to +${number(quantiles.upper_95_percent, 1)} µg/m³) contained ${integer(interval.test_hits)} of ${integer(interval.test_n)} test days (${number(interval.test_coverage * 100, 1)}%). The model wins in winter and pre-monsoon, when pollution moves most, and loses slightly in the calm monsoon.`,
+    );
+  }
+}
+
 function newestSeries(historical) {
   const candidates = [{ label: "PAQI Karachi daily (published)", points: historical.series || [] }].concat(
     (historical.other_series || []).map((item) => ({ label: item.label, points: item.points || [] })),
@@ -692,6 +946,12 @@ function renderDashboard(data) {
   text("source-license", data.source.license_summary);
   text("attribution", data.source.attribution);
   renderSecondSource(data.warehouse || {});
+  renderGlance(data);
+  const insights = data.insights || {};
+  renderSeasonal(insights.seasonal);
+  renderAgreement(insights.agreement, (data.warehouse || {}).cross_source);
+  renderNetwork(insights.network);
+  renderSeasonErrors(data.forecast || {});
   text("page-generated", `Dashboard data assembled ${data.generated_at_utc}`);
   document.getElementById("dashboard-content").hidden = false;
   document.getElementById("loading").hidden = true;
@@ -703,9 +963,16 @@ function renderDashboard(data) {
 function renderInsight(result) {
   const panel = document.getElementById("answer-panel");
   panel.replaceChildren();
+  const urdu = result.language === "ur" && result.answer_ur;
   const status = element("span", `answer-status ${result.status}`);
-  status.textContent = result.status.replaceAll("_", " ");
+  status.textContent = urdu ? STATUS_UR[result.status] || result.status : result.status.replaceAll("_", " ");
   panel.append(status);
+  if (urdu) {
+    const heading = element("h3", "urdu-text", "تصدیق شدہ جواب");
+    heading.setAttribute("lang", "ur");
+    heading.setAttribute("dir", "rtl");
+    panel.append(heading, urduParagraph(result.answer_ur));
+  }
   const explanation = result.explanation || {};
   if (explanation.used) {
     panel.append(element("h3", "", "Plain-language explanation"));
@@ -717,7 +984,7 @@ function renderInsight(result) {
     panel.append(copy);
     panel.append(element("p", "answer-meta", `AI-generated by ${explanation.model}; every number was checked against the cited evidence [E1…].`));
   }
-  panel.append(element("h3", "", explanation.used ? "Verified answer" : "Evidence-grounded answer"));
+  panel.append(element("h3", "", urdu ? "English (verified)" : explanation.used ? "Verified answer" : "Evidence-grounded answer"));
   panel.append(element("p", "answer-copy", result.answer));
   panel.append(element("p", "answer-meta", `Data as of ${result.data_as_of} · Generated ${result.generated_at}`));
   if (result.evidence && result.evidence.length) {
@@ -862,6 +1129,47 @@ function exportChartAsImage() {
 }
 
 const answerLanguage = () => document.getElementById("answer-language")?.value || "en";
+const URDU_SCRIPT = /[\u0600-\u06FF]/;
+const languageFor = (question) => {
+  if (!URDU_SCRIPT.test(question)) return answerLanguage();
+  setAnswerLanguage("ur");
+  return "ur";
+};
+// Dates, numbers and English terms inside RTL Urdu go in <bdi> runs so "2019-05-23" or
+// "Pearson r = 0.87" keep their reading order and never wrap mid-token.
+const LTR_RUN = /[A-Za-z0-9µ][A-Za-z0-9µ³.,:=/+%\-– ]*[A-Za-z0-9µ³%]|[A-Za-z0-9]/g;
+
+function appendMixedUrdu(node, value) {
+  const source = String(value);
+  let last = 0;
+  for (const match of source.matchAll(LTR_RUN)) {
+    if (match.index > last) node.append(document.createTextNode(source.slice(last, match.index)));
+    const run = document.createElement("bdi");
+    run.className = "ltr-run";
+    run.dir = "ltr";
+    run.textContent = match[0];
+    node.append(run);
+    last = match.index + match[0].length;
+  }
+  if (last < source.length) node.append(document.createTextNode(source.slice(last)));
+  return node;
+}
+const STATUS_UR = { answered: "جواب دیا گیا", partially_answered: "جزوی جواب", abstained: "معلوم نہیں" };
+
+function setAnswerLanguage(language) {
+  const select = document.getElementById("answer-language");
+  if (select) select.value = language;
+  document.querySelectorAll(".lang-toggle button").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.lang === language));
+  });
+}
+
+function urduParagraph(textValue, className = "answer-copy") {
+  const node = appendMixedUrdu(element("p", `${className} urdu-text`), textValue);
+  node.setAttribute("lang", "ur");
+  node.setAttribute("dir", "rtl");
+  return node;
+}
 
 async function askQuestion(question) {
   const button = document.getElementById("ask-button");
@@ -877,10 +1185,11 @@ async function askQuestion(question) {
     const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ question, language: answerLanguage() }),
+      body: JSON.stringify({ question, language: languageFor(question) }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `Insight Agent returned HTTP ${response.status}.`);
+    result.language = languageFor(question);
     renderInsight(result);
   } catch (error) {
     panel.replaceChildren(element("p", "error-card", `Could not retrieve an answer: ${error.message}`));
@@ -951,7 +1260,9 @@ function addChatMessage(role, content, meta = null) {
   }
   
   chatWidgetContent.appendChild(messageDiv);
-  chatWidgetContent.scrollTop = chatWidgetContent.scrollHeight;
+  chatWidgetContent.scrollTop = role === "agent" && typeof content !== "string"
+    ? messageDiv.offsetTop - chatWidgetContent.offsetTop
+    : chatWidgetContent.scrollHeight;
   
   chatHistory.push({ role, content, meta });
 }
@@ -971,9 +1282,10 @@ async function sendChatMessage(question) {
     const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ question, language: answerLanguage() }),
+      body: JSON.stringify({ question, language: languageFor(question) }),
     });
     const result = await response.json();
+    const urdu = languageFor(question) === "ur" && result.answer_ur;
     
     chatWidgetContent.removeChild(chatWidgetContent.lastChild);
     chatHistory.pop();
@@ -981,9 +1293,18 @@ async function sendChatMessage(question) {
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     
     const answerContent = element("div", "");
-    const statusBadge = element("span", `answer-status ${result.status}`, result.status.replaceAll("_", " "));
+    const statusBadge = element(
+      "span",
+      `answer-status ${result.status}`,
+      urdu ? STATUS_UR[result.status] || result.status : result.status.replaceAll("_", " "),
+    );
     answerContent.appendChild(statusBadge);
     answerContent.appendChild(document.createElement("br"));
+    if (urdu) {
+      answerContent.appendChild(urduParagraph(result.answer_ur, ""));
+      answerContent.appendChild(element("small", "muted", "English (verified):"));
+      answerContent.appendChild(document.createElement("br"));
+    }
     if (result.explanation && result.explanation.used) {
       const explained = element("p", "", result.explanation.text);
       if (result.explanation.language === "ur") {
@@ -1017,6 +1338,10 @@ async function sendChatMessage(question) {
 }
 
 chatWidgetButton.addEventListener("click", toggleChatWidget);
+document.querySelectorAll(".lang-toggle button").forEach((button) => {
+  button.addEventListener("click", () => setAnswerLanguage(button.dataset.lang));
+});
+document.getElementById("answer-language")?.addEventListener("change", (event) => setAnswerLanguage(event.target.value));
 chatWidgetClose.addEventListener("click", toggleChatWidget);
 
 chatWidgetSend.addEventListener("click", () => {

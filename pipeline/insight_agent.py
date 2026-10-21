@@ -24,6 +24,48 @@ WAREHOUSE_RELATIVE = Path("data/quality/warehouse_quality_report.json")
 NETWORK_REPORT_RELATIVE = Path("data/quality/urban_unit_quality_report.json")
 CROSS_SOURCE_RELATIVE = Path("data/processed/gold_karachi_daily_cross_source.csv")
 ABSTENTION = "I don't know based on the available evidence."
+ABSTENTION_UR = "دستیاب شواہد کی بنیاد پر میں نہیں جانتا۔"
+
+# Urdu question terms mapped to English phrases the classifier already routes, so Urdu
+# questions follow the same priority order as English ones.
+URDU_TERMS = (
+    ("قونصل", " consulate "),
+    ("سفارت", " embassy "),
+    ("موازنہ", " compare sources "),
+    ("متفق", " agree "),
+    ("کتنے ذرائع", " how many sources "),
+    ("کون سے ذرائع", " which sources "),
+    ("ذرائع", " which sources "),
+    ("پورے شہر", " citywide "),
+    ("پورا شہر", " citywide "),
+    ("کراچی کی ہوا", " air quality in karachi "),
+    ("سینسر", " live sensor "),
+    ("ابھی", " now "),
+    ("اس وقت", " now "),
+    ("آج", " today "),
+    ("موجودہ", " currently "),
+    ("وجہ", " cause "),
+    ("کیوں", " why did "),
+    ("پیشگوئی", " forecast "),
+    ("پیش گوئی", " forecast "),
+    ("فورکاسٹ", " forecast "),
+    ("ماڈل", " model beat "),
+    ("لائسنس", " licence "),
+    ("طریقہ", " method "),
+    ("اسٹیشن", " station "),
+    ("غائب", " missing "),
+    ("خالی", " blank "),
+    ("کوالٹی", " quality "),
+    ("معیار", " quality "),
+    ("سال بہ سال", " year by year "),
+    ("سالانہ", " annual "),
+    ("رجحان", " trend "),
+    ("اوسط", " average "),
+    ("زیادہ سے زیادہ", " maximum "),
+    ("کم از کم", " minimum "),
+    ("مشاہدات", " observations "),
+    ("کتنے دن", " how many "),
+)
 
 
 class InsightAgentError(Exception):
@@ -155,7 +197,11 @@ def _contains_any(text: str, *terms: str) -> bool:
 
 
 def _classify(question: str) -> str:
-    text = " ".join(question.lower().split())
+    text = question.lower()
+    for urdu, english in URDU_TERMS:
+        if urdu in text:
+            text += english
+    text = " ".join(text.split())
     citywide_live = _contains_any(
         text,
         "current air quality in karachi",
@@ -299,6 +345,7 @@ def _answer(
     limitations: list[str] = []
     status = "answered"
     answer = ABSTENTION
+    answer_ur = ABSTENTION_UR
 
     if route == "live_sensor":
         from pipeline import live_sensors
@@ -312,6 +359,11 @@ def _answer(
                 f"PM2.5 = {primary.get('pm25_ug_m3')} µg/m³ at {primary.get('observation_time_pkt') or primary.get('observation_time_utc')} "
                 f"(freshness: {primary.get('freshness')}). "
                 "This is a neighbourhood point reading, not a Karachi citywide air-quality index."
+            )
+            answer_ur = (
+                f"عوامی لائیو سینسر '{primary.get('location_name')}' (AirGradient مقام {primary.get('location_id')}) نے آخری بار "
+                f"{primary.get('observation_time_pkt') or primary.get('observation_time_utc')} پر PM2.5 = {primary.get('pm25_ug_m3')} µg/m³ "
+                f"رپورٹ کیا (تازگی: {primary.get('freshness')})۔ یہ ایک محلے کی ریڈنگ ہے، پورے کراچی کا ایئر کوالٹی انڈیکس نہیں۔"
             )
             status = "answered"
             data_as_of = primary.get("observation_time_utc") or data_as_of
@@ -343,6 +395,10 @@ def _answer(
                 f"(live status: {snapshot.get('status')}). "
                 f"The historical PAQI series still ends on {data_as_of}."
             )
+            answer_ur = (
+                f"{ABSTENTION_UR} اس وقت کوئی تصدیق شدہ لائیو PM2.5 ریڈنگ دستیاب نہیں (لائیو حالت: {snapshot.get('status')})۔ "
+                f"PAQI کا تاریخی ڈیٹا {data_as_of} پر ختم ہوتا ہے۔"
+            )
             status = "abstained"
             evidence.append(
                 {
@@ -362,6 +418,7 @@ def _answer(
         cross = warehouse.get("cross_source") or {}
         if not cross.get("paired_days"):
             answer = f"{ABSTENTION} Cross-source agreement has not been computed in this build."
+            answer_ur = f"{ABSTENTION_UR} اس بلڈ میں ذرائع کا باہمی موازنہ ابھی نہیں کیا گیا۔"
             status = "abstained"
         else:
             answer = (
@@ -370,6 +427,12 @@ def _answer(
                 f"{cross['pearson_r']}. PAQI is on average {cross['mean_difference_paqi_minus_consulate']} µg/m³ higher "
                 f"(mean absolute difference {cross['mean_absolute_difference']} µg/m³), and "
                 f"{cross['large_disagreement_days']} days are flagged for large disagreement."
+            )
+            answer_ur = (
+                f"{cross['paired_days']:,} دنوں پر جب PAQI اور امریکی قونصل خانے دونوں کی مکمل یومیہ اوسط موجود تھی "
+                f"({cross['first_paired_date']} سے {cross['last_paired_date']})، دونوں سیریز کا Pearson r = {cross['pearson_r']} ہے۔ "
+                f"PAQI اوسطاً {cross['mean_difference_paqi_minus_consulate']} µg/m³ زیادہ ہے (اوسط مطلق فرق "
+                f"{cross['mean_absolute_difference']} µg/m³)، اور {cross['large_disagreement_days']} دن بڑے فرق کی وجہ سے نشان زد ہیں۔"
             )
         evidence.append(_report_evidence(WAREHOUSE_RELATIVE, "$.cross_source", cross))
         evidence.append({"source_file": CROSS_SOURCE_RELATIVE.as_posix(), "kind": "gold_table", "locator": "paired rows"})
@@ -380,6 +443,7 @@ def _answer(
         sources = warehouse.get("sources", [])
         if not sources:
             answer = f"{ABSTENTION} The warehouse report is not available in this build."
+            answer_ur = f"{ABSTENTION_UR} اس بلڈ میں ویئرہاؤس رپورٹ دستیاب نہیں۔"
             status = "abstained"
         else:
             parts = [
@@ -392,6 +456,14 @@ def _answer(
                 + "; ".join(parts)
                 + f". Two-source compliance: {warehouse.get('two_source_compliance')}."
             )
+            answer_ur = (
+                f"ویئرہاؤس میں {len(sources)} ذرائع سے {warehouse.get('total_gold_rows', 0):,} گولڈ قطاریں ہیں: "
+                + "؛ ".join(
+                    f"{item['publisher']} ({item['license']}، {int(item['gold_rows'] or 0):,} قطاریں، تازہ ترین {item['latest_observation']})"
+                    for item in sources
+                )
+                + f"۔ دو ذرائع کی شرط: {warehouse.get('two_source_compliance')}۔"
+            )
         evidence.append(_report_evidence(WAREHOUSE_RELATIVE, "$.sources", {"sources": sources}))
         limitations.append("The forecast model is trained on the PAQI daily series only.")
     elif route == "live" and _read_json(root / NETWORK_REPORT_RELATIVE).get("latest_hour", {}).get("sensors_reporting"):
@@ -402,6 +474,12 @@ def _answer(
             f"{hour['sensors_reporting']} of {hour['sensors_configured']} Urban Unit AirGradient sensors reported, with a "
             f"median PM2.5 of {hour['median_pm25_ug_m3']} µg/m³ (range {hour['min_pm25_ug_m3']}–{hour['max_pm25_ug_m3']} µg/m³). "
             f"The PAQI historical series ends on {data_as_of}."
+        )
+        answer_ur = (
+            f"میں پورے شہر کا ایئر کوالٹی انڈیکس نہیں دے سکتا۔ ویئرہاؤس کا تازہ ترین گھنٹہ {hour['datetime_to_utc']} پر ختم ہوتا ہے: "
+            f"اربن یونٹ کے {hour['sensors_configured']} میں سے {hour['sensors_reporting']} AirGradient سینسرز نے رپورٹ کیا، اور "
+            f"PM2.5 کی درمیانی قدر (median) {hour['median_pm25_ug_m3']} µg/m³ رہی (حد {hour['min_pm25_ug_m3']}–{hour['max_pm25_ug_m3']} µg/m³)۔ "
+            f"PAQI کا تاریخی ڈیٹا {data_as_of} پر ختم ہوتا ہے۔"
         )
         status = "partially_answered"
         data_as_of = hour["datetime_to_utc"]
@@ -417,12 +495,19 @@ def _answer(
                 "it cannot establish current or real-time citywide air quality. "
                 "Public neighbourhood sensors, when available, are point readings only and are not a Karachi-wide index."
             )
+            answer_ur = (
+                f"{ABSTENTION_UR} دستیاب PAQI سیریز {data_as_of} پر ختم ہوتی ہے، اس لیے یہ موجودہ یا لائیو شہری ہوا کا معیار نہیں بتا سکتی۔ "
+                "عوامی محلہ سینسرز صرف مقامی ریڈنگز ہیں، پورے کراچی کا انڈیکس نہیں۔"
+            )
             limitations.append("Historical measurements are not a live monitoring feed or health-warning service.")
             limitations.append("Ask specifically about a live sensor reading if you want the public AirGradient point feed.")
         else:
             answer = (
                 f"{ABSTENTION} The data can describe recorded PM2.5 values over time, "
                 "but they do not establish why those values changed."
+            )
+            answer_ur = (
+                f"{ABSTENTION_UR} ڈیٹا وقت کے ساتھ ریکارڈ شدہ PM2.5 قدریں بتا سکتا ہے، لیکن یہ ثابت نہیں کرتا کہ قدریں کیوں بدلیں۔"
             )
             limitations.append("No causal design or source evidence linking changes to emissions, traffic, or policy is available.")
         evidence.append(
@@ -463,6 +548,10 @@ def _answer(
             f"{first_date.isoformat()} through {last_date.isoformat()}; "
             f"{sum(value is not None for value in (record.value for record in records)):,} have numeric PM2.5 readings."
         )
+        answer_ur = (
+            f"گولڈ ٹیبل میں {first_date.isoformat()} سے {last_date.isoformat()} تک {len(records):,} تاریخ وار مشاہدات ہیں؛ "
+            f"ان میں سے {len(values):,} میں عددی PM2.5 ریڈنگ موجود ہے۔"
+        )
         evidence.append(
             _gold_evidence(
                 records,
@@ -496,6 +585,11 @@ def _answer(
             f"{len(missing)} of {len(records):,} dated rows have blank PM2.5 values; "
             f"no values were imputed. The latest Data Quality Agent run recorded "
             f"{counts.get('warning_checks', 0)} warning checks and {counts.get('flags', 0)} FLAG decisions."
+        )
+        answer_ur = (
+            f"{len(records):,} میں سے {len(missing)} قطاروں میں PM2.5 کی قدر خالی ہے؛ کوئی قدر اندازے سے نہیں بھری گئی۔ "
+            f"ڈیٹا کوالٹی ایجنٹ کی تازہ ترین رن میں {counts.get('warning_checks', 0)} وارننگ چیکس اور "
+            f"{counts.get('flags', 0)} FLAG فیصلے ریکارڈ ہوئے۔"
         )
         evidence.extend(
             [
@@ -538,6 +632,10 @@ def _answer(
                 f"{year}: n={item['n']}, mean={item['mean']:.2f}, median={item['median']:.2f}, range={item['minimum']:.2f}-{item['maximum']:.2f}"
                 for year, item in summaries.items()
             ) + "."
+            answer_ur = "سال بہ سال PM2.5 خلاصہ (µg/m³): " + "؛ ".join(
+                f"{year}: n={item['n']}، اوسط={item['mean']:.2f}، میڈین={item['median']:.2f}، حد={item['minimum']:.2f}-{item['maximum']:.2f}"
+                for year, item in summaries.items()
+            ) + "۔"
             evidence.append(
                 _gold_evidence(
                     records,
@@ -578,6 +676,11 @@ def _answer(
                     f"(n={len(year_values[first_year])}) and {last_mean:.2f} ug/m3 in {last_year} "
                     f"(n={len(year_values[last_year])}); this describes the recorded series and does not explain causes."
                 )
+                answer_ur = (
+                    f"{first_year} میں سالانہ اوسط {first_mean:.2f} µg/m³ تھی (n={len(year_values[first_year])}) اور "
+                    f"{last_year} میں {last_mean:.2f} µg/m³ (n={len(year_values[last_year])})؛ "
+                    "یہ صرف ریکارڈ شدہ سیریز کی وضاحت ہے، وجوہات کی نہیں۔"
+                )
                 evidence[0]["operation"] = "calculate first- and last-calendar-year means from numeric gold rows"
                 evidence[0]["values"] = {
                     "unit": "ug/m3",
@@ -593,6 +696,10 @@ def _answer(
                     f"Across {len(values):,} numeric PM2.5 readings ({first_date} to {last_date}), "
                     f"mean={mean:.2f}, median={median:.2f}, sample standard deviation={std:.2f}, "
                     f"minimum={minimum_record.value:.2f}, maximum={maximum_record.value:.2f} ug/m3."
+                )
+                answer_ur = (
+                    f"{len(values):,} عددی PM2.5 ریڈنگز ({first_date} سے {last_date}) میں: اوسط={mean:.2f}، میڈین={median:.2f}، "
+                    f"معیاری انحراف={std:.2f}، کم از کم={minimum_record.value:.2f}، زیادہ سے زیادہ={maximum_record.value:.2f} µg/m³۔"
                 )
         limitations.append("Descriptive statistics apply to the published PAQI series; they do not establish monitor identity or citywide representativeness.")
         evidence.append(
@@ -632,6 +739,12 @@ def _answer(
             f"Persistence on those same model-matched dates had MAE={persistence['mae']:.4f} and "
             f"RMSE={persistence['rmse']:.4f}; model-minus-persistence differences were "
             f"{paired['mae_difference']:.4f} MAE and {paired['rmse_difference']:.4f} RMSE."
+        )
+        answer_ur = (
+            f"ٹیسٹ حصے ({test_dates['start']} سے {test_dates['end']}) پر لینیئر ماڈل نے n={model['n']} دنوں میں "
+            f"MAE={model['mae']:.4f} اور RMSE={model['rmse']:.4f} µg/m³ حاصل کیا۔ انہی تاریخوں پر persistence "
+            f"(یعنی کل جیسا آج) کا MAE={persistence['mae']:.4f} اور RMSE={persistence['rmse']:.4f} تھا؛ ماڈل اور persistence کا فرق "
+            f"MAE میں {paired['mae_difference']:.4f} اور RMSE میں {paired['rmse_difference']:.4f} ہے (منفی فرق کا مطلب ماڈل بہتر ہے)۔"
         )
         evidence.extend(
             [
@@ -694,6 +807,11 @@ def _answer(
             f"Known: publisher/source is {known['publisher']}; the source register records {known['license_and_permitted_use']} "
             f"The project describes daily PM2.5 in ug/m3. Unresolved: {unresolved}."
         )
+        answer_ur = (
+            f"معلوم: ناشر/ذریعہ {known['publisher']} ہے، اور سورس رجسٹر میں لائسنس درج ہے: {known['license_and_permitted_use']} "
+            "پروجیکٹ یومیہ PM2.5 (µg/m³) بیان کرتا ہے۔ غیر حل شدہ: PAQI کے اسٹیشن کی شناخت، ڈیٹا جمع کرنے کا طریقہ، "
+            "دن کی حد اور ٹائم زون، اور معیار کی جانچ کی تفصیل شائع نہیں ہوئی۔"
+        )
         evidence.extend(
             [
                 _report_evidence(
@@ -728,12 +846,17 @@ def _answer(
         status = "partially_answered"
     else:
         answer = ABSTENTION + " This agent answers only from the warehouse: PAQI gold table, U.S. Consulate and Urban Unit sensor reports, quality reports, source register and forecast evaluation."
+        answer_ur = (
+            ABSTENTION_UR + " یہ ایجنٹ صرف ویئرہاؤس کے شواہد سے جواب دیتا ہے: PAQI گولڈ ٹیبل، امریکی قونصل خانے اور اربن یونٹ "
+            "سینسر رپورٹس، کوالٹی رپورٹس، سورس رجسٹر اور فورکاسٹ کا جائزہ۔"
+        )
         status = "abstained"
         limitations.append("No matching evidence category was found; no unsupported inference was attempted.")
 
     return {
         "question": question,
         "answer": answer,
+        "answer_ur": answer_ur,
         "status": status,
         "evidence": evidence,
         "limitations": limitations,

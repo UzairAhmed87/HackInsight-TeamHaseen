@@ -25,6 +25,8 @@ WAREHOUSE_RELATIVE = Path("data/quality/warehouse_quality_report.json")
 SOURCE_REGISTER_RELATIVE = Path("docs/source_register.csv")
 CONSULATE_DAILY_RELATIVE = Path("data/processed/gold_us_consulate_karachi_daily.csv")
 NETWORK_DAILY_RELATIVE = Path("data/processed/gold_urban_unit_karachi_network_daily.csv")
+NETWORK_REPORT_RELATIVE = Path("data/quality/urban_unit_quality_report.json")
+CROSS_SOURCE_RELATIVE = Path("data/processed/gold_karachi_daily_cross_source.csv")
 MAX_QUESTION_BYTES = 4096
 SUCCESS_STATUSES = {"success", "success_with_warnings"}
 LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/"
@@ -204,6 +206,49 @@ def _extension_series(root: Path) -> list[dict[str, Any]]:
     return series
 
 
+def _monthly_profile(points: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    import statistics
+
+    by_month: dict[int, list[float]] = {}
+    for point in points:
+        if point["value"] is not None:
+            by_month.setdefault(int(point["date"][5:7]), []).append(point["value"])
+    return [
+        {"month": month, "n": len(by_month.get(month, [])), "mean": statistics.fmean(by_month[month]) if by_month.get(month) else None}
+        for month in range(1, 13)
+    ]
+
+
+def _agreement_points(root: Path) -> list[dict[str, Any]]:
+    try:
+        with (root / CROSS_SOURCE_RELATIVE).open(encoding="utf-8-sig", newline="") as stream:
+            reader = csv.DictReader(stream, strict=True)
+            points = []
+            for row in reader:
+                paqi = _optional_float(row.get("paqi_pm25_ug_m3"))
+                consulate = _optional_float(row.get("us_consulate_daily_mean_ug_m3"))
+                if paqi is not None and consulate is not None:
+                    points.append({"date": row.get("date", ""), "paqi": paqi, "consulate": consulate})
+            return points
+    except (OSError, csv.Error):
+        return []
+
+
+def _network_latest(root: Path) -> dict[str, Any]:
+    try:
+        report = _json_file(root / NETWORK_REPORT_RELATIVE)
+    except DashboardDataError:
+        return {}
+    hour = {key: value for key, value in (report.get("latest_hour") or {}).items() if key != "row_ids"}
+    return {
+        "latest_hour": hour,
+        "latest_age_hours": report.get("latest_age_hours"),
+        "quality_status": report.get("quality_status"),
+        "network_daily_rows": report.get("network_daily_rows"),
+        "hourly_gold_rows": report.get("hourly_gold_rows"),
+    }
+
+
 def _latest_across_sources(gold: list[dict[str, Any]], extensions: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
     candidates = [("PAQI Karachi daily", row) for row in gold if row["value"] is not None]
     for series in extensions:
@@ -356,6 +401,17 @@ def build_dashboard_payload(
             "validation": metrics.get("splits", {}).get("validation", {}),
             "test": metrics.get("splits", {}).get("test", {}),
             "limitations": metrics.get("limitations", []),
+            "by_season": metrics.get("splits", {}).get("test", {}).get("by_season", {}),
+            "interval": metrics.get("splits", {}).get("test", {}).get("empirical_validation_residual_interval", {}),
+        },
+        "insights": {
+            "seasonal": [{"label": "PAQI Karachi daily", "source_id": "paqi", "months": _monthly_profile(gold)}]
+            + [
+                {"label": item["label"].split(" (")[0], "source_id": item["source_id"], "months": _monthly_profile(item["points"])}
+                for item in extensions
+            ],
+            "agreement": _agreement_points(root),
+            "network": _network_latest(root),
         },
         "source": {
             "name": source.get("candidate"),
