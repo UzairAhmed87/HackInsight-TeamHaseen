@@ -6,8 +6,8 @@
   "access_platform": "OpenAQ API v3 /sensors/{id}/hours (hourly aggregates computed by OpenAQ from raw sensor readings)",
   "license": "CC BY 4.0",
   "attribution": "The Urban Unit / AirGradient sensor network, Karachi, accessed via OpenAQ (openaq.org), CC BY 4.0. Hourly values are OpenAQ aggregates; identify modifications; do not imply endorsement.",
-  "run_id": "20261021T062151.853517Z",
-  "checked_at_utc": "2026-10-21T06:21:51Z",
+  "run_id": "20261021T062903.083748Z",
+  "checked_at_utc": "2026-10-21T06:29:03Z",
   "status": "success_with_warnings",
   "quality_status": "passed_with_warnings",
   "sensors": 8,
@@ -17,7 +17,7 @@
   "network_daily_rows": 486,
   "first_observation_utc": "2025-06-19T07:00:00Z",
   "last_observation_utc": "2026-10-21T06:00:00Z",
-  "latest_age_hours": 0.4,
+  "latest_age_hours": 0.5,
   "latest_by_sensor_utc": {
     "Urban Resource Center": "2026-10-21T06:00:00Z",
     "Aga Khan University Main Campus": "2026-10-18T01:00:00Z",
@@ -88,7 +88,7 @@
     },
     "freshness": {
       "status": "warning",
-      "detail": "Latest network hour ends 2026-10-21T06:00:00Z (0.4 h ago); stale sensors (>48 h): Aga Khan University Main Campus."
+      "detail": "Latest network hour ends 2026-10-21T06:00:00Z (0.5 h ago); stale sensors (>48 h): Aga Khan University Main Campus."
     },
     "measurement_caveat": {
       "status": "warning",
@@ -106,7 +106,7 @@
   },
   "decision_log": [
     {
-      "checked_at_utc": "2026-10-21T06:21:51Z",
+      "checked_at_utc": "2026-10-21T06:29:03Z",
       "source_row_id": "",
       "source_record_key": "",
       "observed_date": "",
@@ -118,7 +118,7 @@
       "source_file_sha256": ""
     },
     {
-      "checked_at_utc": "2026-10-21T06:21:51Z",
+      "checked_at_utc": "2026-10-21T06:29:03Z",
       "source_row_id": "",
       "source_record_key": "",
       "observed_date": "",
@@ -130,7 +130,7 @@
       "source_file_sha256": ""
     },
     {
-      "checked_at_utc": "2026-10-21T06:21:51Z",
+      "checked_at_utc": "2026-10-21T06:29:03Z",
       "source_row_id": "",
       "source_record_key": "",
       "observed_date": "",

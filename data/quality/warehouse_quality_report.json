@@ -1,11 +1,11 @@
 {
-  "generated_at_utc": "2026-10-21T06:21:51Z",
-  "run_id": "20261021T062151.853517Z",
+  "generated_at_utc": "2026-10-21T06:29:03Z",
+  "run_id": "20261021T062903.083748Z",
   "status": "success_with_warnings",
   "two_source_compliance": "established",
   "total_gold_rows": 115161,
   "latest_observation_utc": "2026-10-21T06:00:00Z",
-  "latest_observation_age_hours": 0.4,
+  "latest_observation_age_hours": 0.5,
   "sources": [
     {
       "source_id": "paqi_karachi_daily_pm25",
@@ -40,7 +40,7 @@
       "daily_gold_rows": 2934,
       "status": "success_with_warnings",
       "latest_observation": "2026-10-21T06:00:00Z",
-      "latest_age_hours": 0.4,
+      "latest_age_hours": 0.5,
       "quality_report": "data/quality/urban_unit_quality_report.json"
     }
   ],
