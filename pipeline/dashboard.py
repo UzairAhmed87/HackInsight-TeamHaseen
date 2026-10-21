@@ -199,6 +199,8 @@ def _extension_series(root: Path) -> list[dict[str, Any]]:
                 "points": network,
             }
         )
+    for item in series:
+        item["yearly_summary"] = _year_summaries(item["points"])
     return series
 
 
@@ -392,12 +394,12 @@ def build_dashboard_payload(
             "reference": "WHO global air-quality guidelines (2021) discuss health evidence for PM2.5; local regulations may differ.",
         },
         "how_it_works": [
-            "Acquire published historical PAQI Karachi daily PM2.5 from a pinned Zenodo record with checksum verification.",
-            "Validate and organize measurements into raw, cleaned and gold layers without inventing values.",
-            "Describe historical patterns and missingness from the gold table only.",
-            "Evaluate next-day forecasting on chronological train/validation/test splits versus persistence.",
-            "Answer evidence-grounded questions locally; abstain when evidence is insufficient.",
-            "Optionally fetch public AirGradient point sensors for live neighbourhood readings — never as a citywide AQI.",
+            "Acquire three public sources: the pinned PAQI Zenodo record, the US Consulate Karachi monitor and the Urban Unit sensor network (both via OpenAQ), each with SHA-256 provenance.",
+            "Build raw, cleaned and gold layers; the Data Quality Agent records a FIX or FLAG decision with a reason for every issue and never invents values.",
+            "Cross-check PAQI against the Consulate monitor on shared days and report agreement and disagreement.",
+            "Evaluate next-day forecasting on chronological train/validation/test splits versus persistence, with errors by season and pollution level.",
+            "Answer questions from cited evidence only, and say \"I don't know\" when the evidence does not support an answer.",
+            "Refresh the sensor network every hour with a Prefect flow on GitHub Actions; every run is logged to prefect_runs.csv.",
         ],
     }
 
@@ -518,7 +520,7 @@ def make_handler(root: Path = ROOT) -> type[BaseHTTPRequestHandler]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run the local HackInsight dashboard.")
+    parser = argparse.ArgumentParser(description="Run the local HaseenInsight dashboard.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument(
         "--port",
@@ -529,7 +531,7 @@ def main(argv: list[str] | None = None) -> int:
     if not 1 <= args.port <= 65535:
         parser.error("port must be between 1 and 65535")
     server = ThreadingHTTPServer((args.host, args.port), make_handler(ROOT))
-    print(f"HackInsight dashboard running at http://{args.host}:{args.port}/")
+    print(f"HaseenInsight dashboard running at http://{args.host}:{args.port}/")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

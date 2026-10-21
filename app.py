@@ -121,9 +121,9 @@ def quality_and_freshness() -> str:
     return "\n".join(lines)
 
 
-with gr.Blocks(title="HackInsight Air Quality Pakistan", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="HaseenInsight Air Quality Pakistan", theme=gr.themes.Soft()) as demo:
     gr.Markdown(
-        "# HackInsight Air Quality — Karachi\n"
+        "# HaseenInsight Air Quality — Karachi\n"
         "Three-source PM2.5 warehouse (PAQI, U.S. Consulate Karachi, Urban Unit AirGradient network), "
         "a Data Quality Agent, a forecast evaluated against persistence, and an Insight Agent that cites its evidence "
         f"and says \"I don't know\" when the data cannot answer. Code: [{REPO_URL.split('/', 3)[3]}]({REPO_URL})"
