@@ -3,7 +3,7 @@
   "source_id": "paqi_karachi_daily_pm25",
   "source_version": "10.5281/zenodo.15845428",
   "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf",
-  "generated_at_utc": "2026-10-21T04:18:31Z",
+  "generated_at_utc": "2026-10-21T06:29:14Z",
   "target": "published PAQI Karachi daily PM2.5 series value; not a sensor-specific or citywide exposure estimate",
   "unit": "µg/m³",
   "prediction_horizon": "next reported daily series value",

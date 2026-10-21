@@ -1,11 +1,11 @@
 {
-  "run_id": "20261021T040511.255136Z",
-  "started_at_utc": "2026-10-21T04:05:11Z",
+  "run_id": "20261021T062903.083748Z",
+  "started_at_utc": "2026-10-21T06:29:03Z",
   "status": "success_with_warnings",
   "source_id": "paqi_karachi_daily_pm25",
-  "acquisition_status": "reused_cached_file",
+  "acquisition_status": "downloaded",
   "errors": [],
-  "source_fetch_timestamp_utc": "2026-10-20T22:41:35Z",
+  "source_fetch_timestamp_utc": "2026-10-21T06:21:52Z",
   "source_request_http_status": 200,
   "raw_file": "data/raw/paqi_karachi_daily_pm25/10.5281_zenodo.15845428/PAQI_Daily_PM2.5_Data_2016-2024_in_Karachi.csv",
   "raw_byte_size": 51387,
@@ -49,5 +49,5 @@
     "data_quality_agent.source_freshness",
     "data_quality_agent.measurement_methodology_documentation"
   ],
-  "finished_at_utc": "2026-10-21T04:05:12Z"
+  "finished_at_utc": "2026-10-21T06:29:03Z"
 }

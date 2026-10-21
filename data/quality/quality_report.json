@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-21T04:05:11Z",
+  "generated_at_utc": "2026-10-21T06:29:03Z",
   "source_id": "paqi_karachi_daily_pm25",
   "source_version": "10.5281/zenodo.15845428",
   "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf",
@@ -84,8 +84,8 @@
   "data_quality_agent": {
     "agent": "deterministic_data_quality_agent",
     "agent_version": 1,
-    "run_id": "20261021T040511.255136Z",
-    "checked_at_utc": "2026-10-21T04:05:11Z",
+    "run_id": "20261021T062903.083748Z",
+    "checked_at_utc": "2026-10-21T06:29:03Z",
     "source_id": "paqi_karachi_daily_pm25",
     "source_version": "10.5281/zenodo.15845428",
     "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf",
@@ -152,7 +152,7 @@
       },
       "acquisition_manifest_lineage": {
         "status": "pass",
-        "detail": "Manifest includes the raw source hash; fetch timestamp 2026-10-20T22:41:35Z."
+        "detail": "Manifest includes the raw source hash; fetch timestamp 2026-10-21T06:21:52Z."
       }
     },
     "counts": {
@@ -171,7 +171,7 @@
     "audit_log_scope": "append_only_history",
     "source_level_issues": [
       {
-        "checked_at_utc": "2026-10-21T04:05:11Z",
+        "checked_at_utc": "2026-10-21T06:29:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -183,7 +183,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T04:05:11Z",
+        "checked_at_utc": "2026-10-21T06:29:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -195,7 +195,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T04:05:11Z",
+        "checked_at_utc": "2026-10-21T06:29:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -207,7 +207,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T04:05:11Z",
+        "checked_at_utc": "2026-10-21T06:29:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -219,7 +219,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T04:05:11Z",
+        "checked_at_utc": "2026-10-21T06:29:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
@@ -231,7 +231,7 @@
         "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf"
       },
       {
-        "checked_at_utc": "2026-10-21T04:05:11Z",
+        "checked_at_utc": "2026-10-21T06:29:03Z",
         "source_row_id": "",
         "source_record_key": "",
         "observed_date": "",
