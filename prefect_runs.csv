@@ -1,0 +1,2 @@
+flow_run_id,flow_run_name,state,started_at_utc,finished_at_utc,duration_seconds,pipeline_run_id,pipeline_status,quality_status,dq_checks_passed,dq_checks_warning,dq_checks_failed,gold_rows,two_source_compliance,cross_source_pearson_r,latest_observation_date,test_mae_linear,test_mae_persistence,message
+2aa09766-752b-4b39-8d27-95282d976bf3,augmented-chipmunk,Completed,2026-10-21T06:21:51Z,2026-10-21T06:28:26Z,395.03,20261021T062151.853517Z,success_with_warnings,passed_with_warnings,11,4,0,115161,established,0.87,2024-12-31,9.901176082480134,10.150688073394495,
