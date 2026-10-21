@@ -3,7 +3,7 @@
   "source_id": "paqi_karachi_daily_pm25",
   "source_version": "10.5281/zenodo.15845428",
   "source_file_sha256": "2359a11850df9d5798c446e1013c09f22914426ffc1e1d928c2ec9824502debf",
-  "generated_at_utc": "2026-10-21T03:57:13Z",
+  "generated_at_utc": "2026-10-21T04:12:53Z",
   "target": "published PAQI Karachi daily PM2.5 series value; not a sensor-specific or citywide exposure estimate",
   "unit": "µg/m³",
   "prediction_horizon": "next reported daily series value",
@@ -123,6 +123,115 @@
           }
         }
       },
+      "by_season": {
+        "monsoon_jun_sep": {
+          "n": 202,
+          "linear_model": {
+            "n": 202,
+            "mae": 5.900095878444388,
+            "rmse": 10.457951157080599
+          },
+          "persistence": {
+            "n": 202,
+            "mae": 5.875742574257426,
+            "rmse": 10.828750236438568
+          },
+          "mae_difference": 0.024353304186961466,
+          "mean_residual_actual_minus_model": -0.6095714961903115
+        },
+        "post_monsoon_oct_nov": {
+          "n": 67,
+          "linear_model": {
+            "n": 67,
+            "mae": 12.750768770316204,
+            "rmse": 17.96930311224548
+          },
+          "persistence": {
+            "n": 67,
+            "mae": 12.697014925373136,
+            "rmse": 18.307395944498953
+          },
+          "mae_difference": 0.053753844943068785,
+          "mean_residual_actual_minus_model": 1.6205616461443433
+        },
+        "pre_monsoon_mar_may": {
+          "n": 92,
+          "linear_model": {
+            "n": 92,
+            "mae": 6.753195351177175,
+            "rmse": 10.03412898112052
+          },
+          "persistence": {
+            "n": 92,
+            "mae": 6.873913043478261,
+            "rmse": 10.481650633368774
+          },
+          "mae_difference": -0.12071769230108575,
+          "mean_residual_actual_minus_model": -1.3384751102507224
+        },
+        "winter_dec_feb": {
+          "n": 90,
+          "linear_model": {
+            "n": 90,
+            "mae": 19.567846075756336,
+            "rmse": 26.037024515585024
+          },
+          "persistence": {
+            "n": 90,
+            "mae": 20.987777777777776,
+            "rmse": 27.868442925845553
+          },
+          "mae_difference": -1.4199317020214401,
+          "mean_residual_actual_minus_model": 2.026314528385859
+        }
+      },
+      "by_input_level": {
+        "previous_35_to_75": {
+          "n": 142,
+          "linear_model": {
+            "n": 142,
+            "mae": 11.69225549183012,
+            "rmse": 17.76933634263821
+          },
+          "persistence": {
+            "n": 142,
+            "mae": 11.890140845070423,
+            "rmse": 17.672972123046303
+          },
+          "mae_difference": -0.19788535324030398,
+          "mean_residual_actual_minus_model": 2.627295788997126
+        },
+        "previous_gt_75": {
+          "n": 80,
+          "linear_model": {
+            "n": 80,
+            "mae": 21.650092135158296,
+            "rmse": 26.646842945364423
+          },
+          "persistence": {
+            "n": 80,
+            "mae": 23.37875,
+            "rmse": 29.393857776753293
+          },
+          "mae_difference": -1.7286578648417041,
+          "mean_residual_actual_minus_model": -2.6471631530589237
+        },
+        "previous_le_35": {
+          "n": 229,
+          "linear_model": {
+            "n": 229,
+            "mae": 4.524949098387693,
+            "rmse": 7.347301166783442
+          },
+          "persistence": {
+            "n": 229,
+            "mae": 4.367685589519651,
+            "rmse": 7.440424226061002
+          },
+          "mae_difference": 0.1572635088680423,
+          "mean_residual_actual_minus_model": -0.5093020275982054
+        }
+      },
       "empirical_validation_residual_interval": {
         "source_split": "validation",
         "validation_residual_count": 451,
@@ -213,6 +322,115 @@
             "mae_difference": -0.3346727694655005,
             "rmse_difference": -0.8021822214972989
           }
+        }
+      },
+      "by_season": {
+        "monsoon_jun_sep": {
+          "n": 122,
+          "linear_model": {
+            "n": 122,
+            "mae": 3.563317602744521,
+            "rmse": 4.975081127088115
+          },
+          "persistence": {
+            "n": 122,
+            "mae": 3.222950819672131,
+            "rmse": 4.9470640407165565
+          },
+          "mae_difference": 0.34036678307239,
+          "mean_residual_actual_minus_model": -1.702237957380814
+        },
+        "post_monsoon_oct_nov": {
+          "n": 116,
+          "linear_model": {
+            "n": 116,
+            "mae": 11.809505506481512,
+            "rmse": 17.722334008570616
+          },
+          "persistence": {
+            "n": 116,
+            "mae": 11.753448275862068,
+            "rmse": 17.534050616856415
+          },
+          "mae_difference": 0.056057230619444454,
+          "mean_residual_actual_minus_model": 3.5062851228245027
+        },
+        "pre_monsoon_mar_may": {
+          "n": 92,
+          "linear_model": {
+            "n": 92,
+            "mae": 7.187096870309232,
+            "rmse": 10.9904013726108
+          },
+          "persistence": {
+            "n": 92,
+            "mae": 7.546739130434782,
+            "rmse": 11.918833288393698
+          },
+          "mae_difference": -0.35964226012554956,
+          "mean_residual_actual_minus_model": -1.551048127461046
+        },
+        "winter_dec_feb": {
+          "n": 106,
+          "linear_model": {
+            "n": 106,
+            "mae": 17.46294786420946,
+            "rmse": 24.887021611683647
+          },
+          "persistence": {
+            "n": 106,
+            "mae": 18.630188679245283,
+            "rmse": 26.319018878312715
+          },
+          "mae_difference": -1.1672408150358216,
+          "mean_residual_actual_minus_model": 1.9577913892887473
+        }
+      },
+      "by_input_level": {
+        "previous_35_to_75": {
+          "n": 97,
+          "linear_model": {
+            "n": 97,
+            "mae": 13.288624420683878,
+            "rmse": 17.430263155055844
+          },
+          "persistence": {
+            "n": 97,
+            "mae": 13.348453608247421,
+            "rmse": 17.84113167322755
+          },
+          "mae_difference": -0.05982918756354394,
+          "mean_residual_actual_minus_model": 2.6204690158868766
+        },
+        "previous_gt_75": {
+          "n": 104,
+          "linear_model": {
+            "n": 104,
+            "mae": 18.85756525251872,
+            "rmse": 26.66173775518325
+          },
+          "persistence": {
+            "n": 104,
+            "mae": 20.10096153846154,
+            "rmse": 27.462602193360507
+          },
+          "mae_difference": -1.2433962859428185,
+          "mean_residual_actual_minus_model": 1.573567574061253
+        },
+        "previous_le_35": {
+          "n": 235,
+          "linear_model": {
+            "n": 235,
+            "mae": 4.539274114438537,
+            "rmse": 7.386027395247488
+          },
+          "persistence": {
+            "n": 235,
+            "mae": 4.4272340425531915,
+            "rmse": 8.207894487314856
+          },
+          "mae_difference": 0.11204007188534515,
+          "mean_residual_actual_minus_model": -0.6551107202469079
         }
       },
       "empirical_validation_residual_interval": {

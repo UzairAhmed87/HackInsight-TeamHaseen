@@ -278,6 +278,43 @@ def _quantile(values: list[float], probability: float) -> float:
     return ordered[low] + fraction * (ordered[high] - ordered[low])
 
 
+SEASONS = {
+    12: "winter_dec_feb", 1: "winter_dec_feb", 2: "winter_dec_feb",
+    3: "pre_monsoon_mar_may", 4: "pre_monsoon_mar_may", 5: "pre_monsoon_mar_may",
+    6: "monsoon_jun_sep", 7: "monsoon_jun_sep", 8: "monsoon_jun_sep", 9: "monsoon_jun_sep",
+    10: "post_monsoon_oct_nov", 11: "post_monsoon_oct_nov",
+}
+
+
+def _input_band(previous: float) -> str:
+    # Bands use the previous reading (known at prediction time) and Pakistan's 35 µg/m³ 24-hour PM2.5 standard.
+    if previous <= 35:
+        return "previous_le_35"
+    if previous <= 75:
+        return "previous_35_to_75"
+    return "previous_gt_75"
+
+
+def _group_errors(rows: list[dict[str, Any]], key: Any) -> dict[str, Any]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        groups.setdefault(key(row), []).append(row)
+    result = {}
+    for name in sorted(groups):
+        members = groups[name]
+        actual = [row["actual"] for row in members]
+        model = regression_metrics(actual, [row["model_prediction"] for row in members])
+        persistence = regression_metrics(actual, [row["persistence_prediction"] for row in members])
+        result[name] = {
+            "n": model["n"],
+            "linear_model": model,
+            "persistence": persistence,
+            "mae_difference": model["mae"] - persistence["mae"],
+            "mean_residual_actual_minus_model": sum(a - row["model_prediction"] for a, row in zip(actual, members)) / len(members),
+        }
+    return result
+
+
 def run_experiment(
     gold_path: Path = GOLD_PATH,
     quality_path: Path = QUALITY_PATH,
@@ -431,6 +468,8 @@ def run_experiment(
                     else None
                 ),
             }
+        by_season = _group_errors(matched_model_rows, lambda row: SEASONS[int(row["observed_date"][5:7])])
+        by_input_level = _group_errors(matched_model_rows, lambda row: _input_band(row["persistence_prediction"]))
         interval_test_rows = [
             row for row in model_rows if split == "test"
         ]
@@ -460,6 +499,8 @@ def run_experiment(
                 for row in split_rows
             ),
             "by_target_year": by_year,
+            "by_season": by_season,
+            "by_input_level": by_input_level,
             "empirical_validation_residual_interval": {
                 "source_split": "validation",
                 "validation_residual_count": len(validation_residuals),

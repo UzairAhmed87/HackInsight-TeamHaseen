@@ -90,6 +90,19 @@ class ForecastingTests(unittest.TestCase):
         self.assertAlmostEqual(result["rmse"], (2.5) ** 0.5)
         self.assertEqual(forecasting._quantile([-2.0, 0.0, 2.0], 0.5), 0.0)
 
+    def test_group_errors_partition_rows_and_use_prior_reading_for_bands(self) -> None:
+        rows = [
+            {"observed_date": "2024-01-05", "actual": 80.0, "model_prediction": 70.0, "persistence_prediction": 90.0},
+            {"observed_date": "2024-07-05", "actual": 20.0, "model_prediction": 22.0, "persistence_prediction": 18.0},
+            {"observed_date": "2024-07-06", "actual": 30.0, "model_prediction": 26.0, "persistence_prediction": 40.0},
+        ]
+        seasons = forecasting._group_errors(rows, lambda row: forecasting.SEASONS[int(row["observed_date"][5:7])])
+        self.assertEqual({name: group["n"] for name, group in seasons.items()}, {"monsoon_jun_sep": 2, "winter_dec_feb": 1})
+        self.assertAlmostEqual(seasons["monsoon_jun_sep"]["linear_model"]["mae"], 3.0)
+        self.assertAlmostEqual(seasons["monsoon_jun_sep"]["persistence"]["mae"], 6.0)
+        bands = forecasting._group_errors(rows, lambda row: forecasting._input_band(row["persistence_prediction"]))
+        self.assertEqual(set(bands), {"previous_gt_75", "previous_le_35", "previous_35_to_75"})
+
 
 if __name__ == "__main__":
     unittest.main()
