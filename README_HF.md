@@ -3,7 +3,9 @@ title: HackInsight Air Quality Pakistan
 emoji: 🌍
 colorFrom: blue
 colorTo: green
-sdk: static
+sdk: gradio
+sdk_version: 4.44.0
+app_file: app_gradio.py
 pinned: false
 license: cc-by-4.0
 tags:
