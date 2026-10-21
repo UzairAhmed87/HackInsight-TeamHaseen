@@ -1,9 +1,9 @@
 {
-  "run_id": "20261021T062903.083748Z",
-  "started_at_utc": "2026-10-21T06:29:03Z",
+  "run_id": "20261021T094837.383318Z",
+  "started_at_utc": "2026-10-21T09:48:37Z",
   "status": "success_with_warnings",
   "source_id": "paqi_karachi_daily_pm25",
-  "acquisition_status": "downloaded",
+  "acquisition_status": "reused_cached_file",
   "errors": [],
   "source_fetch_timestamp_utc": "2026-10-21T06:21:52Z",
   "source_request_http_status": 200,
@@ -49,5 +49,5 @@
     "data_quality_agent.source_freshness",
     "data_quality_agent.measurement_methodology_documentation"
   ],
-  "finished_at_utc": "2026-10-21T06:29:03Z"
+  "finished_at_utc": "2026-10-21T09:48:38Z"
 }
