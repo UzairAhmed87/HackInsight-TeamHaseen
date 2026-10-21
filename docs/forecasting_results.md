@@ -52,7 +52,7 @@ The linear model's signed validation residuals (actual minus prediction; n=451) 
 
 - The target is the published PAQI Karachi series—not an identified monitor or representative citywide concentration. Station identity, monitor/network aggregation, exact timezone/window, QA, blank-value meaning and methodology changes remain unresolved; see [forecasting readiness](forecasting_readiness.md) and the [unsent PAQI inquiry](paqi_methodology_inquiry.md).
 - The source endpoint is 2024-12-31. The experiment is entirely historical and provides no current conditions.
-- Only one source was used. Two-source independence/compliance is not established.
+- The model uses only the PAQI series. The warehouse also holds the U.S. Consulate and Urban Unit sources (see README), which are not model inputs.
 - Residuals and year groups are temporally dependent; no significance test was attempted.
 
 ## Reproduction and artifacts

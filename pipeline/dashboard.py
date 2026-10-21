@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from pipeline import insight_agent
+from pipeline import insight_agent, llm_explainer
 from pipeline import live_sensors
 
 
@@ -21,6 +21,7 @@ GOLD_RELATIVE = Path("data/processed/gold_air_quality.csv")
 QUALITY_RELATIVE = Path("data/quality/quality_report.json")
 EXECUTION_RELATIVE = Path("data/reports/execution_status.json")
 METRICS_RELATIVE = Path("data/reports/forecast_metrics.json")
+WAREHOUSE_RELATIVE = Path("data/quality/warehouse_quality_report.json")
 SOURCE_REGISTER_RELATIVE = Path("docs/source_register.csv")
 MAX_QUESTION_BYTES = 4096
 SUCCESS_STATUSES = {"success", "success_with_warnings"}
@@ -194,6 +195,11 @@ def build_dashboard_payload(
     quality = _json_file(root / QUALITY_RELATIVE)
     execution = _json_file(root / EXECUTION_RELATIVE)
     metrics = _json_file(root / METRICS_RELATIVE)
+    try:
+        warehouse = _json_file(root / WAREHOUSE_RELATIVE)
+    except DashboardDataError:
+        warehouse = {}
+    two_source = warehouse.get("two_source_compliance", "not_established")
     source = _source_register(root)
     first_date = gold[0]["date"]
     last_date = gold[-1]["date"]
@@ -259,7 +265,7 @@ def build_dashboard_payload(
             "unresolved_methodology": agent_checks.get(
                 "measurement_methodology_documentation", {}
             ).get("detail", "Measurement methodology remains unresolved."),
-            "two_source_compliance": agent_report.get("two_source_compliance", "not_established"),
+            "two_source_compliance": two_source,
             "append_only_log_is_historical": True,
         },
         "forecast": {
@@ -277,12 +283,19 @@ def build_dashboard_payload(
             "license_summary": source.get("licence_and_permitted_use"),
             "license_url": LICENSE_URL,
             "independence_status": source.get("independence_status"),
-            "two_source_compliance": "not_established",
+            "two_source_compliance": two_source,
             "attribution": (
                 "Omar Abid, Dawar Hameed Butt, and Mahad Naveed / Pakistan Air Quality Initiative (PAQI), "
                 "Unveiling Karachi's Air, version DOI 10.5281/zenodo.15845428, CC BY 4.0. "
                 "Identify modifications; do not imply endorsement."
             ),
+        },
+        "warehouse": {
+            "two_source_compliance": two_source,
+            "total_gold_rows": warehouse.get("total_gold_rows"),
+            "sources": warehouse.get("sources", []),
+            "cross_source": warehouse.get("cross_source", {}),
+            "checks": warehouse.get("checks", {}),
         },
         "live": _live_snapshot(root, now=now),
         "health_guidance": {
@@ -382,6 +395,8 @@ def make_handler(root: Path = ROOT) -> type[BaseHTTPRequestHandler]:
             self.send_response(200)
             self.send_header("Content-Type", asset[1])
             self.send_header("Content-Length", str(len(body)))
+            # Assets are not fingerprinted, so browsers must revalidate or they keep pre-deploy HTML/JS.
+            self.send_header("Cache-Control", "no-cache")
             self._security_headers()
             self.end_headers()
             self.wfile.write(body)
@@ -409,6 +424,8 @@ def make_handler(root: Path = ROOT) -> type[BaseHTTPRequestHandler]:
                 return
             try:
                 answer = insight_agent.answer_question(question, root=root)
+                language = body.get("language") if body.get("language") in llm_explainer.LANGUAGES else "en"
+                answer["explanation"] = llm_explainer.explain(answer, language=language)
             except (insight_agent.InsightAgentError, ValueError):
                 _send_json(
                     self,

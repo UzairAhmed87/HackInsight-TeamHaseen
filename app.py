@@ -1,279 +1,165 @@
 #!/usr/bin/env python3
+"""Hugging Face Space (Gradio SDK): Insight Agent, data freshness, quality status and last successful run.
+
+Every number shown here is read from committed pipeline artifacts at request time.
 """
-Hugging Face Space App - Gradio Wrapper (FREE TIER)
-Wraps the existing dashboard for HF Spaces using Gradio SDK
-"""
+from __future__ import annotations
 
 import csv
-import gradio as gr
+import json
 import sys
 from pathlib import Path
-import json
 
-# Add pipeline to path
-sys.path.insert(0, str(Path(__file__).parent))
+import gradio as gr
 
-# Import dashboard components
-try:
-    from pipeline import insight_agent
-    from pathlib import Path
-    
-    # Load data artifacts
-    GOLD_DATA = Path("data/processed/gold_air_quality.csv")
-    QUALITY_REPORT = Path("data/quality/quality_report.json")
-    EXECUTION_STATUS = Path("data/reports/execution_status.json")
-    FORECAST_METRICS = Path("data/reports/forecast_metrics.json")
-    PIPELINE_RUNS = Path("prefect_runs.csv")
-    
-    data_available = all([
-        GOLD_DATA.exists(),
-        QUALITY_REPORT.exists(),
-        EXECUTION_STATUS.exists(),
-        FORECAST_METRICS.exists()
-    ])
-except Exception as e:
-    data_available = False
-    print(f"⚠️ Warning: {e}")
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
 
-def get_dashboard_html():
-    """Load the dashboard HTML"""
-    dashboard_path = Path("dashboard/index.html")
-    if dashboard_path.exists():
-        with open(dashboard_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    return "<h1>Dashboard not found</h1>"
+from pipeline import insight_agent, llm_explainer  # noqa: E402
 
-def ask_insight_agent(question):
-    """Query the Insight Agent"""
-    if not data_available:
-        return {
-            "answer": "Data artifacts not available. Please run the data pipeline first.",
-            "status": "error",
-            "generated_at": None
-        }
-    
+WAREHOUSE_REPORT = ROOT / "data" / "quality" / "warehouse_quality_report.json"
+PAQI_QUALITY = ROOT / "data" / "quality" / "quality_report.json"
+FORECAST_METRICS = ROOT / "data" / "reports" / "forecast_metrics.json"
+PIPELINE_RUNS = ROOT / "prefect_runs.csv"
+REPO_URL = "https://github.com/UzairAhmed87/HackInsight-TeamHaseen"
+
+
+def _json(path: Path) -> dict:
     try:
-        # Call the insight agent
-        if not question or not question.strip():
-            return {"answer": "Please type a question.", "status": "error"}
-        return insight_agent.answer_question(question)
-    except Exception as e:
-        return {
-            "answer": f"Error: {str(e)}",
-            "status": "error",
-            "generated_at": None
-        }
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
 
-def format_agent_response(response):
-    """Format the agent response for display"""
-    if isinstance(response, dict):
-        answer = response.get('answer', 'No answer')
-        status = response.get('status', 'unknown')
-        
-        # Format nicely
-        output = f"**Answer:** {answer}\n\n"
-        output += f"**Status:** {status}\n\n"
-        
-        evidence = response.get('evidence') or []
-        if evidence:
-            output += "**Evidence:**\n"
-            for item in evidence:
-                locator = item.get('locator') or item.get('operation') or item.get('kind', '')
-                date_range = item.get('date_range')
-                span = f" ({date_range['start']} → {date_range['end']})" if date_range else ""
-                output += f"- `{item.get('source_file', '')}` — {locator}{span}\n"
 
-        limitations = response.get('limitations') or []
-        if limitations:
-            output += "\n**Limitations:**\n"
-            for item in (limitations if isinstance(limitations, list) else [limitations]):
-                output += f"- {item}\n"
+def ask(question: str, language: str) -> str:
+    if not question or not question.strip():
+        return "Please type a question."
+    try:
+        result = insight_agent.answer_question(question)
+    except (insight_agent.InsightAgentError, ValueError) as exc:
+        return f"The Insight Agent could not access its evidence: {exc}"
+    explanation = llm_explainer.explain(result, language="ur" if language.startswith("اردو") else "en")
+    lines = []
+    if explanation.get("used"):
+        lines += [f"**Plain-language explanation** _(AI: {explanation['model']}, numbers checked against evidence)_",
+                  "", explanation["text"], ""]
+    lines += [f"**Verified answer** · `{result['status']}`", "", result["answer"], ""]
+    if result.get("evidence"):
+        lines.append("**Evidence**")
+        for index, item in enumerate(result["evidence"], start=1):
+            locator = item.get("locator") or item.get("operation") or item.get("kind", "")
+            span = item.get("date_range")
+            span_text = f" ({span['start']} → {span['end']})" if span else ""
+            lines.append(f"- [E{index}] `{item.get('source_file', '')}` — {locator}{span_text}")
+    if result.get("limitations"):
+        lines += ["", "**Limitations**"] + [f"- {item}" for item in result["limitations"] if item]
+    lines += ["", f"_Data as of {result.get('data_as_of')} · generated {result.get('generated_at')}_"]
+    if not explanation.get("used") and explanation.get("reason") == "rejected_by_guardrail":
+        lines.append("_An AI explanation was generated but discarded because it failed the evidence check._")
+    return "\n".join(lines)
 
-        if response.get('data_as_of'):
-            output += f"\n_Data as of: {response['data_as_of']}_\n"
-        
-        return output
-    return str(response)
 
-def get_pipeline_status():
-    """Get the latest pipeline run status"""
-    if PIPELINE_RUNS.exists():
-        try:
-            with open(PIPELINE_RUNS, newline='') as f:
-                runs = list(csv.DictReader(f))
-        except (OSError, csv.Error):
-            runs = []
-        if runs:
-            latest = runs[-1]
-            successful = [r for r in runs if r.get('status', '').startswith('success')]
-            text = f"**Total logged runs:** {len(runs)}\n\n"
-            text += f"**Latest run:** {latest.get('timestamp')} — `{latest.get('status')}`\n\n"
-            if successful:
-                last_ok = successful[-1]
-                text += f"**Last successful run:** {last_ok.get('timestamp')} ({last_ok.get('records_processed')} records, {last_ok.get('duration_seconds')}s)\n"
-            return text
-    return "Pipeline runs log not available"
+def pipeline_status() -> str:
+    try:
+        with PIPELINE_RUNS.open(encoding="utf-8", newline="") as stream:
+            runs = list(csv.DictReader(stream))
+    except OSError:
+        runs = []
+    if not runs:
+        return "No Prefect runs logged yet (`prefect_runs.csv` is written by the hourly flow)."
+    latest = runs[-1]
+    completed = [run for run in runs if run.get("state") == "Completed"]
+    text = [
+        "### Hourly Prefect flow",
+        f"- **Logged runs:** {len(runs)} ({len(completed)} completed, {len(runs) - len(completed)} not completed)",
+        f"- **Latest run:** {latest.get('finished_at_utc')} — `{latest.get('state')}` ({latest.get('flow_run_name')})",
+    ]
+    if completed:
+        last = completed[-1]
+        text.append(
+            f"- **Last successful run:** {last.get('finished_at_utc')} · {last.get('gold_rows')} gold rows · "
+            f"quality `{last.get('quality_status')}` · {last.get('duration_seconds')} s"
+        )
+    return "\n".join(text)
 
-def get_quality_summary():
-    """Get quality report summary"""
-    if QUALITY_REPORT.exists():
-        try:
-            with open(QUALITY_REPORT, 'r') as f:
-                report = json.load(f)
-                
-            agent = report.get('data_quality_agent', {})
-            counts = agent.get('counts', {})
 
-            summary = "**Data Quality Summary:**\n\n"
-            summary += f"- **Quality status:** {report.get('quality_status', agent.get('status', 'unknown'))}\n"
-            summary += f"- **Agent status:** {agent.get('status', 'unknown')}\n"
-            summary += f"- **Checks:** {counts.get('passed_checks', 0)} passed, {counts.get('warning_checks', 0)} warnings, {counts.get('failed_checks', 0)} failed\n"
-            summary += f"- **FIX:** {counts.get('fixes', 0)} · **FILL** (not applied): {counts.get('fills_not_applied', 0)} · **FLAG:** {counts.get('flags', 0)}\n"
-            summary += "\n**Data Freshness:**\n\n"
-            summary += f"- **Observations:** {report.get('first_observation_date')} → {report.get('last_observation_date')} ({report.get('gold_record_count')} gold rows)\n"
-            summary += f"- **Latest observation age:** {agent.get('source_age_days')} days\n"
-            summary += f"- **Last quality check:** {agent.get('checked_at_utc')}\n"
-            return summary
-        except Exception as e:
-            return f"Error loading quality report: {e}"
-    return "Quality report not available"
+def quality_and_freshness() -> str:
+    warehouse = _json(WAREHOUSE_REPORT)
+    paqi = _json(PAQI_QUALITY).get("data_quality_agent", {})
+    test = _json(FORECAST_METRICS).get("splits", {}).get("test", {})
+    lines = ["### Data freshness and quality"]
+    for source in warehouse.get("sources", []):
+        age = f" ({source['latest_age_hours']} h old at last run)" if source.get("latest_age_hours") is not None else ""
+        lines.append(
+            f"- **{source['publisher']}** — {source['license']}, {source['resolution']}, "
+            f"{int(source.get('gold_rows') or 0):,} gold rows, latest `{source.get('latest_observation')}`{age}, "
+            f"status `{source.get('status')}`"
+        )
+    if warehouse:
+        lines.append(
+            f"- **Warehouse:** {warehouse.get('total_gold_rows', 0):,} gold rows · two-source compliance "
+            f"`{warehouse.get('two_source_compliance')}` · generated {warehouse.get('generated_at_utc')}"
+        )
+        cross = warehouse.get("cross_source", {})
+        if cross.get("paired_days"):
+            lines.append(
+                f"- **Cross-source check:** PAQI vs U.S. Consulate on {cross['paired_days']:,} days, "
+                f"Pearson r = {cross['pearson_r']}, mean difference {cross['mean_difference_paqi_minus_consulate']} µg/m³"
+            )
+    counts = paqi.get("counts", {})
+    if counts:
+        lines.append(
+            f"- **PAQI Data Quality Agent:** {counts.get('passed_checks')} passed, {counts.get('warning_checks')} warnings, "
+            f"{counts.get('failed_checks')} failed · FIX {counts.get('fixes')} · FLAG {counts.get('flags')}"
+        )
+    model, persistence = test.get("linear_model", {}), test.get("persistence_on_model_matched_targets", {})
+    if model.get("mae") is not None:
+        lines.append(
+            f"- **Model (held-out test {test['dates']['start']} → {test['dates']['end']}):** linear MAE "
+            f"{model['mae']:.2f} vs persistence {persistence.get('mae', float('nan')):.2f} µg/m³ (n = {model.get('n')})"
+        )
+    return "\n".join(lines)
 
-# Create Gradio Interface
+
 with gr.Blocks(title="HackInsight Air Quality Pakistan", theme=gr.themes.Soft()) as demo:
-    gr.Markdown("""
-    # 🌍 HackInsight Air Quality Pakistan
-    
-    **Automated air quality intelligence system with:**
-    - 📊 Journal-quality data warehouse (2 independent sources)
-    - ✅ Automated quality monitoring (15 validation rules)
-    - 📈 Forecasting model (beats persistence: 9.90 vs 10.15 test MAE)
-    - 🤖 Evidence-grounded RAG Insight Agent
-    
-    **GitHub:** [UzairAhmed87/HackInsight-TeamHaseen](https://github.com/UzairAhmed87/HackInsight-TeamHaseen)
-    """)
-    
-    with gr.Tabs():
-        # Tab 1: Insight Agent
-        with gr.Tab("💬 Insight Agent"):
-            gr.Markdown("""
-            ### Ask the Evidence-Grounded AI Agent
-            
-            The agent answers questions using **only gold data** and **cites sources**.
-            It says **"I don't know"** when data doesn't support the question.
-            
-            **Try asking:**
-            - How many PM2.5 readings are missing?
-            - What's the average PM2.5 level in the dataset?
-            - How did the model compare with persistence?
-            - What's the data coverage period?
-            """)
-            
-            with gr.Row():
-                question_input = gr.Textbox(
-                    label="Your Question",
-                    placeholder="How many missing PM2.5 readings?",
-                    lines=2
-                )
-            
-            ask_button = gr.Button("Ask Agent 🤖", variant="primary")
-            
-            answer_output = gr.Markdown(label="Agent Response")
-            
-            ask_button.click(
-                fn=lambda q: format_agent_response(ask_insight_agent(q)),
-                inputs=question_input,
-                outputs=answer_output
-            )
-            
-            # Example questions
-            gr.Examples(
-                examples=[
-                    ["How many PM2.5 readings are missing?"],
-                    ["What's the average PM2.5 level in the dataset?"],
-                    ["How did the model compare with persistence on the test set?"],
-                    ["What's the data coverage period?"],
-                    ["What's the current citywide Karachi AQI?"]  # Should say "I don't know"
-                ],
-                inputs=question_input
-            )
-        
-        # Tab 2: Pipeline Status
-        with gr.Tab("⚙️ Pipeline Status"):
-            gr.Markdown("### Automated Hourly Pipeline")
-            
-            pipeline_status = gr.Markdown(get_pipeline_status())
-            quality_status = gr.Markdown(get_quality_summary())
-            
-            refresh_button = gr.Button("🔄 Refresh Status")
-            refresh_button.click(
-                fn=lambda: (get_pipeline_status(), get_quality_summary()),
-                outputs=[pipeline_status, quality_status]
-            )
-        
-        # Tab 3: Project Info
-        with gr.Tab("📖 About"):
-            gr.Markdown("""
-            ## Project Overview
-            
-            ### 🎯 Hackathon Track: Air Quality
-            **Team:** TeamHaseen
-            
-            ### ✅ Requirements Met
-            
-            **1. Data Warehouse**
-            - ✅ 2 independent sources (PAQI + AirGradient)
-            - ✅ Raw/cleaned/processed layers
-            - ✅ SHA-256 row-level lineage
-            - ✅ Rebuild with: `make data`
-            
-            **2. Data Quality Agent**
-            - ✅ 15+ validation rules
-            - ✅ Fix/fill/flag decisions logged
-            - ✅ Deterministic (no LLM)
-            
-            **3. Forecasting Model**
-            - ✅ Linear regression beats persistence baseline
-            - ✅ Test MAE: 9.90 vs 10.15 µg/m³ (persistence)
-            - ✅ Time-based train/val/test splits
-            - ✅ Uncertainty quantification
-            
-            **4. Insight Agent (RAG)**
-            - ✅ Cites evidence sources
-            - ✅ Says "I don't know" when unsupported
-            - ✅ Numbers only from gold tables
-            
-            **5. Automation**
-            - ✅ Hourly GitHub Actions pipeline
-            - ✅ Logged to prefect_runs.csv
-            - ✅ Shows freshness/quality/last run
-            
-            ### 📊 Key Metrics
-            - **Data Points:** 3,009 daily observations
-            - **Coverage:** 8+ years (2016-2024)
-            - **Quality Checks:** 15 validation rules
-            - **Model Performance:** about 2.5% lower test MAE than persistence
-            - **Automation:** 24 runs/day
-            - **Cost:** $0/month
-            
-            ### 🔗 Links
-            - **GitHub:** [UzairAhmed87/HackInsight-TeamHaseen](https://github.com/UzairAhmed87/HackInsight-TeamHaseen)
-            - **Tag:** v1.0-final
-            - **Full Dashboard:** See repository for complete UI
-            
-            ### 📄 License
-            - **Data:** CC BY 4.0 (PAQI)
-            - **Attribution:** Omar Abid, Dawar Hameed Butt, Mahad Naveed, PAQI
-            """)
-    
-    gr.Markdown("""
-    ---
-    **Built for HackInsight '26 Hackathon** | Air Quality Track | Journal-Quality Dataset
-    """)
-
-# Launch the app
-if __name__ == "__main__":
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=7860,
-        share=False
+    gr.Markdown(
+        "# HackInsight Air Quality — Karachi\n"
+        "Three-source PM2.5 warehouse (PAQI, U.S. Consulate Karachi, Urban Unit AirGradient network), "
+        "a Data Quality Agent, a forecast evaluated against persistence, and an Insight Agent that cites its evidence "
+        f"and says \"I don't know\" when the data cannot answer. Code: [{REPO_URL.split('/', 3)[3]}]({REPO_URL})"
     )
+    with gr.Tab("Insight Agent"):
+        question = gr.Textbox(label="Your question", placeholder="Do PAQI and the US Consulate monitor agree?", lines=2)
+        language = gr.Radio(["English", "اردو (Urdu)"], value="English", label="Explanation language")
+        button = gr.Button("Ask with evidence", variant="primary")
+        answer = gr.Markdown()
+        button.click(ask, inputs=[question, language], outputs=answer)
+        question.submit(ask, inputs=[question, language], outputs=answer)
+        gr.Examples(
+            [
+                ["What is the current air quality in Karachi?"],
+                ["Do PAQI and the US Consulate monitor agree?"],
+                ["How did the model compare with persistence on the held-out test set?"],
+                ["How many PM2.5 readings are missing?"],
+                ["Did traffic cause the PM2.5 increase?"],
+            ],
+            inputs=question,
+        )
+    with gr.Tab("Pipeline status"):
+        status_md = gr.Markdown(pipeline_status())
+        quality_md = gr.Markdown(quality_and_freshness())
+        gr.Button("Refresh").click(lambda: (pipeline_status(), quality_and_freshness()), outputs=[status_md, quality_md])
+    with gr.Tab("About"):
+        gr.Markdown(
+            "- **Sources and licences:** PAQI daily PM2.5 (Zenodo DOI 10.5281/zenodo.15845428, CC BY 4.0); "
+            "U.S. Consulate General Karachi monitor via OpenAQ location 8156 (US Public Domain); "
+            "The Urban Unit AirGradient sensors via OpenAQ (CC BY 4.0).\n"
+            "- **Rebuild:** `make data` (raw → cleaned → gold for every source). Hourly: GitHub Actions runs the Prefect "
+            "flow in `prefect_flow.py`, which appends to `prefect_runs.csv`.\n"
+            "- **Generative AI:** optional; it only rephrases the verified answer and is discarded if it introduces any "
+            "number not present in the cited evidence.\n"
+            "- Informational only; not medical or regulatory advice."
+        )
+
+if __name__ == "__main__":
+    demo.launch(server_name="0.0.0.0", server_port=7860)

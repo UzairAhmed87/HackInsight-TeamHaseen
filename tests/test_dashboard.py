@@ -48,11 +48,15 @@ class DashboardPayloadTests(unittest.TestCase):
         payload = dashboard.build_dashboard_payload(self.root, now=self.now)
         quality = payload["quality"]
         self.assertEqual(quality["count_scope"], "current_run_only")
-        self.assertEqual(quality["counts"]["warning_checks"], 5)
-        self.assertEqual(quality["counts"]["flags"], 13)
+        self.assertEqual(quality["counts"]["warning_checks"], 4)
+        self.assertEqual(quality["counts"]["flags"], 12)
         self.assertTrue(quality["warning_checks"])
         self.assertIn("unresolved", quality["unresolved_methodology"])
-        self.assertEqual(quality["two_source_compliance"], "not_established")
+        self.assertEqual(quality["two_source_compliance"], "established")
+        warehouse = payload["warehouse"]
+        self.assertEqual({item["source_id"] for item in warehouse["sources"]}, {"paqi_karachi_daily_pm25", "us_consulate_karachi_pm25", "urban_unit_karachi_airgradient_pm25"})
+        self.assertGreater(warehouse["total_gold_rows"], 100000)
+        self.assertGreater(warehouse["cross_source"]["paired_days"], 1000)
 
     def test_payload_forecast_has_validation_and_held_out_test_provenance(self) -> None:
         payload = dashboard.build_dashboard_payload(self.root, now=self.now)

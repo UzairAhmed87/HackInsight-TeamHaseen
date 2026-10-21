@@ -1,218 +1,36 @@
-"""
-Demo Video Script for HackInsight Air Quality Pakistan
-Duration: 3 minutes max
-Hackathon Submission - Air Quality Track
-"""
-
-# ============================================================================
-# DEMO VIDEO SCRIPT - 3 MINUTES
-# ============================================================================
-
-## SECTION 1: PROBLEM & SOLUTION (30 seconds)
-"""
-[Screen: Dashboard homepage]
-
-"Hi! This is HackInsight - an automated air quality intelligence system for Pakistan.
-
-Air pollution is a critical health crisis. But existing data is scattered, 
-unreliable, and hard to trust. 
-
-We built a journal-quality data warehouse with automated quality monitoring, 
-forecasting, and an AI agent that never invents facts.
-
-Let me show you how it works."
-"""
-
-## SECTION 2: DATA WAREHOUSE (45 seconds)
-"""
-[Screen: Terminal showing `make data`]
-
-"Everything starts with traceable, licensed data. We use 2 independent sources:
-PAQI's historical dataset from Zenodo, and live AirGradient sensors.
-
-Watch this: one command rebuilds the entire warehouse.
-
-[Run: make data]
-
-[Screen: File explorer showing data/raw, data/cleaned, data/processed]
-
-Raw data stays untouched. Cleaned data is normalized. 
-And gold data has SHA-256 row-level lineage.
-
-Every observation is traceable to its original source."
-"""
-
-## SECTION 3: DATA QUALITY AGENT (45 seconds)
-"""
-[Screen: data/quality/quality_report.json]
-
-"Here's our Data Quality Agent in action. It's deterministic - no black box.
-
-[Scroll through quality_report.json]
-
-It checks 15+ validation rules: schema, dates, duplicates, missing values.
-
-[Screen: data/quality/quality_log.csv]
-
-Every decision is logged: fix, fill, or flag. With the reason.
-
-[Highlight example rows]
-
-See? 305 fixes for trailing decimals. 6 missing values flagged - never invented.
-
-This is journal-quality validation."
-"""
-
-## SECTION 4: FORECASTING MODEL (30 seconds)
-"""
-[Screen: Dashboard forecast section]
-
-"Our linear regression model beats the persistence baseline.
-
-[Point to metrics]
-
-Time-based splits: train, validation, test. No data leakage.
-
-[Point to uncertainty intervals]
-
-Uncertainty intervals from validation residuals. 
-
-[Point to yearly breakdown]
-
-Errors broken down by year. Full transparency."
-"""
-
-## SECTION 5: INSIGHT AGENT (RAG) (30 seconds)
-"""
-[Screen: Dashboard chat widget]
-
-"Now the magic: our Insight Agent.
-
-[Type: "How many missing PM2.5 readings?"]
-
-It answers with citations. From gold data only.
-
-[Show response with evidence references]
-
-[Type: "What's the current citywide AQI?"]
-
-Watch this: it says "I don't know" when data doesn't support it.
-
-No hallucinations. Evidence-grounded only."
-"""
-
-## SECTION 6: AUTOMATION & FRESHNESS (20 seconds)
-"""
-[Screen: GitHub Actions workflow]
-
-"Everything runs automatically. Every hour.
-
-[Show: .github/workflows/hourly-pipeline.yml]
-
-GitHub Actions triggers the pipeline. 
-
-[Screen: prefect_runs.csv]
-
-Every run is logged. Status, row counts, quality metrics.
-
-[Point to dashboard freshness indicator]
-
-Dashboard shows data freshness and last successful run."
-"""
-
-## SECTION 7: UI & FEATURES (20 seconds)
-"""
-[Screen: Dashboard - toggle dark mode]
-
-"Modern UI with dark mode. WCAG AAA contrast.
-
-[Show calendar heatmap]
-
-Calendar heatmap for daily patterns.
-
-[Click export buttons]
-
-Export data as CSV or charts as PNG.
-
-[Show keyboard shortcuts]
-
-Keyboard shortcuts for power users.
-
-Professional, not 'vibe coded'."
-"""
-
-## SECTION 8: COMPLIANCE & WRAP-UP (20 seconds)
-"""
-[Screen: README or checklist]
-
-"Let's verify hackathon requirements:
-
-✅ 2 independent sources
-✅ Traceable, licensed data  
-✅ Quality Agent with fix/fill/flag
-✅ Model beats baseline with uncertainty
-✅ RAG Agent with citations
-✅ Hourly automation
-✅ Hugging Face Space
-
-[Screen: Repository]
-
-Full code on GitHub. Tag v1.0-final.
-
-Journal-quality data. Automated pipeline. Trustworthy insights.
-
-That's HackInsight. Thank you!"
-"""
-
-# ============================================================================
-# RECORDING TIPS
-# ============================================================================
-
-"""
-BEFORE RECORDING:
-1. Clear browser cache and restart dashboard
-2. Test all demo flows once
-3. Prepare example questions for Insight Agent
-4. Have terminal commands ready in history
-5. Set screen resolution to 1920x1080
-6. Close unnecessary apps/notifications
-7. Test microphone and screen recording
-
-DURING RECORDING:
-- Speak clearly and confidently
-- Use cursor highlights or zoom for important details
-- Keep a steady pace (not rushed)
-- Show real outputs, not mockups
-- Demonstrate actual functionality
-
-EDITING:
-- Add title card with team name
-- Add section titles/transitions
-- Highlight key metrics with text overlays
-- Speed up long waits (2x)
-- Add background music (subtle)
-- Export at 1080p, 30fps
-- Keep under 3 minutes (aim for 2:45)
-
-FILE NAMING:
-- hackinsight_demo_v1.0.mp4
-- Upload to Google Drive or YouTube (unlisted)
-- Add link to README and submission form
-"""
-
-# ============================================================================
-# ALTERNATIVE: 2-MINUTE FAST VERSION
-# ============================================================================
-
-"""
-If 3 minutes is too long, here's a 2-minute version:
-
-1. Problem (15s): Air quality crisis, need trustworthy data
-2. Warehouse (30s): 2 sources, make data, lineage
-3. Quality Agent (30s): 15 checks, fix/fill/flag, logged
-4. Model + RAG (30s): Beats baseline, cited answers, no hallucinations
-5. Automation (15s): Hourly pipeline, logged runs
-6. Wrap-up (10s): ✅ All requirements, GitHub, HF Space
-
-Total: 2:10
-"""
+# Demo video script (≤ 3 minutes) and viva notes
+
+Record the screen at 1080p on the Render dashboard (or the Space) with a terminal beside it. Every number below is on screen; read it from there, not from this script, in case the hourly run has updated it.
+
+## 0:00–0:20 Problem and user
+"Karachi residents, and the school heads, clinics and journalists who advise them, need to know how polluted the air is without being misled. Most public numbers come with no source, no quality check, and no 'we don't know'."
+
+## 0:20–0:55 Data: three publishers, one command
+- Terminal: run `make data` (it reuses cached raw files, so it takes about 10 s). Point at the `two_source_compliance: established` line and the total of 115,146 gold rows.
+- Dashboard → Sources: PAQI (Zenodo DOI, CC BY 4.0), U.S. Consulate Karachi monitor (US Public Domain), Urban Unit AirGradient sensors (CC BY 4.0).
+- "PAQI and the Consulate monitor agree, r = 0.87 over 1,399 days, and the 63 days where they disagree are flagged rather than deleted."
+
+## 0:55–1:30 Data Quality Agent
+- Open `data/quality/us_consulate_quality_report.json` → `decision_log`.
+- "10,519 hours have no value. The agent logs FILL: not applied, because filling them would invent exposure. One hour reads exactly 985, the instrument's error value, so it is excluded from daily averages. Every decision is logged with a reason and a row count."
+
+## 1:30–2:00 Model
+- Dashboard → Forecast. "Linear model 9.90 vs persistence 10.15 MAE on 436 held-out days. The interval covers 91.5% of test days. The gain is on polluted winter days (17.46 vs 18.63). On clean monsoon days persistence is slightly better, and we report that."
+
+## 2:00–2:40 Insight Agent
+Ask three questions in the chat widget:
+1. "What is the current air quality in Karachi?" The agent gives the latest hour across the sensors, cites the evidence, and refuses a citywide index.
+2. "Did traffic cause the PM2.5 increase?" It answers "I don't know based on the available evidence."
+3. Switch to اردو and ask "Do PAQI and the US Consulate monitor agree?" Show the plain-language explanation next to the verified answer. (This needs `GEMINI_API_KEY`; otherwise show the guardrail test `python -m unittest tests.test_llm_explainer -v`.)
+
+## 2:40–3:00 Automation
+- GitHub → Actions → "Hourly Data Pipeline": a list of green hourly runs. Open `prefect_runs.csv` and point at a flow-run ID, its state, and the last successful run.
+- "Rebuilt every hour, logged by Prefect, and every number in this video comes from those files."
+
+## Viva notes: likely questions
+- **Why OpenAQ if it's an aggregator?** It is only the access route. The original publishers are the U.S. State Department/AirNow and the Urban Unit. Licence and provider are read from OpenAQ metadata on every run, and the run fails if they change.
+- **Are PAQI and the Consulate independent?** They come from different publishers. PAQI doesn't publish its monitor list, so we measure agreement (r = 0.87) instead of assuming independence.
+- **Why not impute missing hours?** Imputed values would be invented exposure. Daily means need at least 18 valid hours (US EPA 75% rule).
+- **Why is the model so close to persistence?** Daily PM2.5 is highly autocorrelated. We report the 2.5% gain honestly, show where it helps (winter, polluted days) and where it doesn't (monsoon), and claim no significance.
+- **What stops the LLM from hallucinating?** It never sees raw data. It only rewrites the verified answer, and code rejects any output containing a number that isn't in the evidence, missing the required abstention, or citing evidence that doesn't exist. Tests: `tests/test_llm_explainer.py`.
+- **Where does the hourly data come from?** The Urban Unit sensors via OpenAQ. The current month's raw file is re-fetched each hour; completed months are frozen with SHA-256 sidecars.

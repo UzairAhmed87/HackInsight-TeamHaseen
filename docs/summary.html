@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HackInsight '26 — Team Haseen — Summary</title>
+<style>
+  @page { size: A4; margin: 12mm 13mm; }
+  body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 9.1pt; line-height: 1.36; color: #0f172a; margin: 0; }
+  h1 { font-size: 15pt; margin: 0 0 2px; }
+  .sub { color: #475569; margin: 0 0 8px; font-size: 8.6pt; }
+  h2 { font-size: 10pt; margin: 9px 0 3px; color: #0369a1; border-bottom: 1px solid #e2e8f0; padding-bottom: 1px; }
+  p { margin: 0 0 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 2px 0 4px; font-size: 8.3pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 2px 5px; text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; }
+  ul { margin: 0 0 4px 15px; padding: 0; }
+  li { margin: 0 0 1px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .foot { margin-top: 8px; font-size: 7.8pt; color: #475569; }
+  b { font-weight: 650; }
+</style>
+</head>
+<body>
+<h1>HackInsight '26 · Karachi Air Quality · Team Haseen</h1>
+<p class="sub">Track: Air quality · Muhammad Taha Farrukh, Muhammad Bilal Rasheed, Muhammad Uzzam Siddiqui, Uzair Ahmed · github.com/UzairAhmed87/HackInsight-TeamHaseen (tag v1.0-final) · hackinsight-air-quality-pakistan.onrender.com</p>
+
+<h2>Problem and primary user</h2>
+<p>Karachi residents, and the school heads, clinic staff and journalists who advise them, see PM2.5 numbers with no source, no quality check and no admission of uncertainty. We built a traceable, reproducible warehouse and agents that explain it without inventing anything.</p>
+
+<h2>Dataset: 115,146 gold rows from three original publishers, rebuilt with <code>make data</code></h2>
+<table>
+<tr><th>Source (publisher)</th><th>Access / licence</th><th>Rows</th><th>Coverage</th></tr>
+<tr><td>PAQI Karachi daily PM2.5 (Pakistan Air Quality Initiative)</td><td>Zenodo DOI 10.5281/zenodo.15845428 · CC BY 4.0</td><td>3,009 days</td><td>2016-10-06 → 2024-12-31</td></tr>
+<tr><td>U.S. Consulate General Karachi monitor (U.S. Dept. of State / EPA AirNow)</td><td>OpenAQ location 8156 · US Public Domain</td><td>46,937 hours</td><td>2019-05-22 → 2025-03-04</td></tr>
+<tr><td>Urban Unit AirGradient network, 8 sensors (The Urban Unit)</td><td>OpenAQ v3 hourly · CC BY 4.0</td><td>65,200 hours</td><td>2025-06-19 → refreshed hourly</td></tr>
+</table>
+<p>The raw files are kept verbatim and never overwritten, each with a SHA-256 provenance sidecar. Every gold row has a stable SHA-256 <code>row_id</code> and the hash of its raw file. Licence and provider are re-read from source metadata on every run. <b>Cross-source check:</b> on 1,399 shared days, PAQI vs Consulate Pearson r = 0.87, mean difference +3.43 µg/m³; 63 days are flagged for large disagreement. PAQI does not publish its monitor set, so we report agreement instead of assuming independence. No synthetic or personal data is used.</p>
+
+<div class="cols">
+<div>
+<h2>Data Quality Agent (deterministic)</h2>
+<ul>
+<li><b>PAQI:</b> 11 pass / 4 warn / 0 fail. FIX 305 (<code>22.0</code>→<code>22</code>, original kept). FILL not applied to 6 blank days. FLAG 12 (undocumented methodology, staleness).</li>
+<li><b>Consulate:</b> 10,519 null hours, FILL not applied. One 985 µg/m³ BAM error value excluded. 8 hours &gt; 500 kept for review. Daily mean only with ≥ 18 valid hours (EPA 75%).</li>
+<li><b>Urban Unit:</b> 27,294 absent sensor-hours not imputed; checks for frozen values, low coverage, stale sensors and the low-cost-sensor caveat.</li>
+<li>Critical schema, duplicate, hash or licence failures stop the run. Every decision is logged with a reason and row count.</li>
+</ul>
+</div>
+<div>
+<h2>Model vs declared baseline</h2>
+<p>Next-day PAQI value, OLS on 1/2/7-day lags vs persistence; frozen chronological splits (test 2023-10-07 → 2024-12-31, n = 436).</p>
+<table>
+<tr><th>Test</th><th>MAE</th><th>RMSE</th></tr>
+<tr><td>Linear model</td><td><b>9.90</b></td><td><b>16.33</b></td></tr>
+<tr><td>Persistence</td><td>10.15</td><td>16.94</td></tr>
+</table>
+<p><b>Uncertainty:</b> the validation-residual 5–95% interval (−23.8, +29.5) covers 91.5% of test days. <b>Errors by group:</b> winter 17.46 vs 18.63; previous day &gt; 75 µg/m³ 18.86 vs 20.10; monsoon 3.56 vs 3.22 (persistence better). No significance is claimed.</p>
+</div>
+</div>
+
+<h2>Insight Agent (RAG) and generative layer</h2>
+<p>A deterministic router retrieves evidence from the gold tables and reports, and computes every number at query time. It returns cited evidence (file, locator, row IDs), limitations and <code>data_as_of</code>. It says <i>"I don't know based on the available evidence"</i> for causal, off-topic or unsupported questions, and for "current air" it gives the latest sensor hour but refuses a citywide index. An optional LLM (Gemini/Groq) rewrites the verified answer in English or Urdu with [E#] citations. Code discards any output containing a number not in the evidence, a missing abstention or a fake citation.</p>
+
+<h2>Automation and dashboard</h2>
+<p>GitHub Actions runs every hour: unit tests (81), then the Prefect flow (warehouse + quality agents, then forecast). It commits refreshed artifacts and <code>prefect_runs.csv</code>, which Prefect state hooks write with one row per run, including failures. The Render dashboard and the Hugging Face Space show per-source freshness, quality status, the last successful run, cross-source agreement, forecast evaluation and the agent.</p>
+
+<h2>Limitations</h2>
+<p>PAQI's monitor set, day boundary and QA are undocumented. The Consulate monitor stopped in March 2025. Urban Unit sensors are uncorrected low-cost sensors, and their median is not a citywide or regulatory value. The forecast is a historical backtest. This is not medical advice. AI use is documented in AI_Use_Log.md.</p>
+<p class="foot">Attribution: PAQI (Omar Abid, Dawar Hameed Butt, Mahad Naveed), CC BY 4.0 · U.S. Department of State / U.S. EPA AirNow · The Urban Unit / AirGradient, CC BY 4.0 · accessed via OpenAQ (openaq.org).</p>
+</body>
+</html>

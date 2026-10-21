@@ -8,10 +8,18 @@
 /data/Unveiling-Karachi-Air_PAQI.pdf
 # Read-only evidence required by the public dashboard deployment.
 !/data/processed/
+/data/processed/*
 !/data/processed/gold_air_quality.csv
+!/data/processed/gold_us_consulate_karachi_daily.csv
+!/data/processed/gold_karachi_daily_cross_source.csv
+!/data/processed/gold_urban_unit_karachi_sensor_daily.csv
+!/data/processed/gold_urban_unit_karachi_network_daily.csv
 !/data/quality/
 /data/quality/*
 !/data/quality/quality_report.json
+!/data/quality/us_consulate_quality_report.json
+!/data/quality/warehouse_quality_report.json
+!/data/quality/urban_unit_quality_report.json
 !/data/reports/
 /data/reports/*
 !/data/reports/execution_status.json

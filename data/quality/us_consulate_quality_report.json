@@ -1,0 +1,154 @@
+{
+  "agent": "deterministic_data_quality_agent",
+  "source_id": "us_consulate_karachi_pm25",
+  "title": "U.S. Consulate General Karachi PM2.5 reference monitor (hourly)",
+  "original_publisher": "U.S. Department of State air quality monitoring programme, disseminated through U.S. EPA AirNow",
+  "access_platform": "OpenAQ API v3 (provider: AirNow)",
+  "license": "US Public Domain",
+  "attribution": "U.S. Department of State / U.S. EPA AirNow, U.S. Consulate General Karachi monitor, accessed via OpenAQ (openaq.org). Identify modifications; do not imply endorsement.",
+  "run_id": "20261021T040511.255136Z",
+  "checked_at_utc": "2026-10-21T04:05:11Z",
+  "status": "success_with_warnings",
+  "quality_status": "passed_with_warnings",
+  "raw_record_count": 46937,
+  "hourly_gold_rows": 46937,
+  "hourly_numeric_rows": 36418,
+  "daily_gold_rows": 2044,
+  "daily_complete_rows": 1454,
+  "first_observation_utc": "2019-05-22T21:00:00Z",
+  "last_observation_utc": "2025-03-04T12:00:00Z",
+  "source_age_days": 595,
+  "quality_flag_counts": {
+    "extreme_value_review": 8,
+    "missing_source_value": 10519,
+    "ok": 35436,
+    "source_flag_window": 973,
+    "suspected_instrument_error_code": 1
+  },
+  "checks": {
+    "acquisition_and_licence": {
+      "status": "pass",
+      "detail": "71 monthly raw files (0 fetched this run, 71 reused after SHA-256 verification); provider AirNow and licence 'US Public Domain' confirmed from OpenAQ location metadata."
+    },
+    "record_schema": {
+      "status": "pass",
+      "detail": "All 46937 raw records are pm25, µg/m³, 1-hour periods."
+    },
+    "duplicate_timestamps": {
+      "status": "pass",
+      "detail": "No duplicate hourly timestamps."
+    },
+    "missing_values": {
+      "status": "warning",
+      "detail": "10519 of 46937 hourly records have no published value (OpenAQ nulls readings that failed its limit checks, e.g. the -999 missing-data code). Retained as blank; not imputed."
+    },
+    "value_range": {
+      "status": "pass",
+      "detail": "All numeric values within 0–1000 µg/m³."
+    },
+    "suspect_values": {
+      "status": "warning",
+      "detail": "1 hour(s) at the 985 µg/m³ instrument limit excluded from daily means; 8 hour(s) above 500 µg/m³ kept and flagged for review."
+    },
+    "source_flags": {
+      "status": "pass",
+      "detail": "973 numeric hours fall inside an OpenAQ 'Limits exceeded' window caused by neighbouring nulled readings; the values themselves passed limits and are kept."
+    },
+    "hourly_continuity": {
+      "status": "warning",
+      "detail": "3766 hours have no record at all between the first and last observation (50703 expected)."
+    },
+    "daily_completeness": {
+      "status": "warning",
+      "detail": "1454 of 2044 local days have ≥18 valid hours (US EPA 75% completeness convention); other days have a blank daily mean."
+    },
+    "freshness": {
+      "status": "warning",
+      "detail": "Monitor's last published hour is 2025-03-04T12:00:00Z (595 days ago); OpenAQ lists no newer data, so this is a closed historical record."
+    }
+  },
+  "counts": {
+    "passed_checks": 5,
+    "warning_checks": 5,
+    "failed_checks": 0,
+    "fixes": 0,
+    "fills_applied": 0,
+    "fills_not_applied": 2,
+    "flags": 13
+  },
+  "decision_log": [
+    {
+      "checked_at_utc": "2026-10-21T04:05:11Z",
+      "source_row_id": "",
+      "source_record_key": "",
+      "observed_date": "",
+      "issue": "missing_source_value",
+      "severity": "warning",
+      "decision": "FILL",
+      "action_taken": "not_applied",
+      "reason": "10519 rows: hourly PM2.5 is null at source; interpolation would invent exposure, so no fill.",
+      "source_file_sha256": ""
+    },
+    {
+      "checked_at_utc": "2026-10-21T04:05:11Z",
+      "source_row_id": "",
+      "source_record_key": "",
+      "observed_date": "",
+      "issue": "missing_source_value",
+      "severity": "warning",
+      "decision": "FLAG",
+      "action_taken": "retained_blank_excluded_from_daily_mean",
+      "reason": "10519 rows flagged missing_source_value.",
+      "source_file_sha256": ""
+    },
+    {
+      "checked_at_utc": "2026-10-21T04:05:11Z",
+      "source_row_id": "",
+      "source_record_key": "",
+      "observed_date": "",
+      "issue": "source_flag_window",
+      "severity": "info",
+      "decision": "FLAG",
+      "action_taken": "retained_included",
+      "reason": "973 rows overlap an OpenAQ limits flag window.",
+      "source_file_sha256": ""
+    },
+    {
+      "checked_at_utc": "2026-10-21T04:05:11Z",
+      "source_row_id": "",
+      "source_record_key": "",
+      "observed_date": "",
+      "issue": "absent_hours",
+      "severity": "warning",
+      "decision": "FILL",
+      "action_taken": "not_applied",
+      "reason": "3766 hours missing from the source record; no rows synthesised.",
+      "source_file_sha256": ""
+    },
+    {
+      "checked_at_utc": "2026-10-21T04:05:11Z",
+      "source_row_id": "",
+      "source_record_key": "",
+      "observed_date": "",
+      "issue": "insufficient_valid_hours",
+      "severity": "warning",
+      "decision": "FLAG",
+      "action_taken": "daily_mean_left_blank",
+      "reason": "590 days below 18 valid hours.",
+      "source_file_sha256": ""
+    },
+    {
+      "checked_at_utc": "2026-10-21T04:05:11Z",
+      "source_row_id": "",
+      "source_record_key": "",
+      "observed_date": "",
+      "issue": "source_not_current",
+      "severity": "warning",
+      "decision": "FLAG",
+      "action_taken": "disclosed",
+      "reason": "Latest observation 2025-03-04T12:00:00Z; not used as a current reading.",
+      "source_file_sha256": ""
+    }
+  ],
+  "record_level_decisions": 9
+}
