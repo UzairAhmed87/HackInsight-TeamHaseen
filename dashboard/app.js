@@ -1,5 +1,125 @@
 "use strict";
 
+// Dark Mode Toggle
+const themeToggle = document.getElementById("theme-toggle");
+const themeIcon = document.getElementById("theme-icon");
+const savedTheme = localStorage.getItem("theme") || "light";
+
+document.documentElement.setAttribute("data-theme", savedTheme);
+themeIcon.textContent = savedTheme === "dark" ? "☀️" : "🌙";
+
+themeToggle.addEventListener("click", () => {
+  const currentTheme = document.documentElement.getAttribute("data-theme");
+  const newTheme = currentTheme === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", newTheme);
+  localStorage.setItem("theme", newTheme);
+  themeIcon.textContent = newTheme === "dark" ? "☀️" : "🌙";
+});
+
+// AQI Calculator and Health Recommendations
+function getAQIInfo(pm25) {
+  if (pm25 == null || pm25 < 0) return null;
+  
+  let category, level, icon, recommendations;
+  
+  if (pm25 <= 12) {
+    category = "Good";
+    level = "aqi-good";
+    icon = "✅";
+    recommendations = [
+      "Air quality is excellent! Perfect day for outdoor activities",
+      "No health precautions needed for any group",
+      "Great time for exercise, sports, and outdoor recreation"
+    ];
+  } else if (pm25 <= 35.4) {
+    category = "Moderate";
+    level = "aqi-moderate";
+    icon = "⚠️";
+    recommendations = [
+      "Air quality is acceptable for most people",
+      "Unusually sensitive people should limit prolonged outdoor exertion",
+      "Generally safe for outdoor activities"
+    ];
+  } else if (pm25 <= 55.4) {
+    category = "Unhealthy for Sensitive Groups";
+    level = "aqi-unhealthy-sensitive";
+    icon = "⚠️";
+    recommendations = [
+      "Children, elderly, and people with respiratory conditions should reduce outdoor exertion",
+      "General public is not likely to be affected",
+      "Consider wearing a mask if you're in a sensitive group"
+    ];
+  } else if (pm25 <= 150.4) {
+    category = "Unhealthy";
+    level = "aqi-unhealthy";
+    icon = "🚨";
+    recommendations = [
+      "Everyone should reduce prolonged outdoor exertion",
+      "Sensitive groups should avoid outdoor activities",
+      "Wear N95 masks when going outside",
+      "Keep windows closed and use air purifiers indoors"
+    ];
+  } else if (pm25 <= 250.4) {
+    category = "Very Unhealthy";
+    level = "aqi-very-unhealthy";
+    icon = "🚨";
+    recommendations = [
+      "Everyone should avoid all outdoor physical activities",
+      "Sensitive groups should remain indoors",
+      "Use N95 or better masks if you must go outside",
+      "Run air purifiers and keep windows sealed"
+    ];
+  } else {
+    category = "Hazardous";
+    level = "aqi-hazardous";
+    icon = "☠️";
+    recommendations = [
+      "Health alert! Everyone should stay indoors",
+      "Avoid all outdoor activities",
+      "Use high-quality air purifiers indoors",
+      "Seal windows and doors completely",
+      "Wear N99 masks if outdoor exposure is unavoidable"
+    ];
+  }
+  
+  return { category, level, icon, recommendations, pm25: pm25.toFixed(1) };
+}
+
+function renderHealthWidget(latestPM25) {
+  const widget = document.getElementById("health-widget");
+  const aqiStatus = document.getElementById("aqi-status");
+  const recList = document.getElementById("health-rec-list");
+  const healthIcon = document.getElementById("health-icon");
+  
+  if (!latestPM25 || latestPM25 < 0) {
+    widget.style.display = "none";
+    return;
+  }
+  
+  const info = getAQIInfo(latestPM25);
+  if (!info) {
+    widget.style.display = "none";
+    return;
+  }
+  
+  widget.style.display = "block";
+  healthIcon.textContent = info.icon;
+  
+  aqiStatus.innerHTML = `
+    <div class="aqi-indicator ${info.level}">
+      <span>${info.icon}</span>
+      <span><strong>${info.category}</strong> - PM2.5: ${info.pm25} µg/m³</span>
+    </div>
+  `;
+  
+  recList.innerHTML = "";
+  info.recommendations.forEach(rec => {
+    const li = document.createElement("li");
+    li.textContent = rec;
+    recList.appendChild(li);
+  });
+}
+
 const number = (value, digits = 2) =>
   typeof value === "number" && Number.isFinite(value)
     ? value.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits })
@@ -59,6 +179,20 @@ function renderChart(series, unit) {
   description.textContent = `Historical daily PM2.5 readings, ${series[0].date} to ${series[series.length - 1].date}; missing records are not interpolated.`;
   svg.append(description);
 
+  // Create tooltip element
+  const tooltip = document.createElement("div");
+  tooltip.style.position = "absolute";
+  tooltip.style.display = "none";
+  tooltip.style.padding = "8px 12px";
+  tooltip.style.background = "rgba(0, 0, 0, 0.9)";
+  tooltip.style.color = "white";
+  tooltip.style.borderRadius = "6px";
+  tooltip.style.fontSize = "0.875rem";
+  tooltip.style.pointerEvents = "none";
+  tooltip.style.zIndex = "1000";
+  tooltip.style.whiteSpace = "nowrap";
+  wrap.appendChild(tooltip);
+
   for (let tick = 0; tick <= 4; tick += 1) {
     const value = (maxValue / 4) * tick;
     const y = yAt(value);
@@ -95,6 +229,59 @@ function renderChart(series, unit) {
     path.setAttribute("class", "chart-series");
     svg.append(path);
   }
+  
+  // Add interactive points with tooltips
+  series.forEach((row, index) => {
+    if (typeof row.value !== "number") return;
+    const x = xAt(index);
+    const y = yAt(row.value);
+    const circle = document.createElementNS(svg.namespaceURI, "circle");
+    circle.setAttribute("cx", x);
+    circle.setAttribute("cy", y);
+    circle.setAttribute("r", "3.5");
+    circle.setAttribute("class", "chart-point");
+    circle.style.cursor = "pointer";
+    
+    // Get AQI info for color coding
+    const aqiInfo = getAQIInfo(row.value);
+    if (aqiInfo) {
+      const colorMap = {
+        "aqi-good": "#10b981",
+        "aqi-moderate": "#f59e0b",
+        "aqi-unhealthy-sensitive": "#f97316",
+        "aqi-unhealthy": "#ef4444",
+        "aqi-very-unhealthy": "#9333ea",
+        "aqi-hazardous": "#7f1d1d"
+      };
+      circle.setAttribute("fill", colorMap[aqiInfo.level] || "#0ea5e9");
+    }
+    
+    circle.addEventListener("mouseenter", (e) => {
+      const rect = wrap.getBoundingClientRect();
+      const aqiInfo = getAQIInfo(row.value);
+      tooltip.innerHTML = `
+        <strong>${row.date}</strong><br>
+        PM2.5: ${number(row.value, 1)} µg/m³<br>
+        ${aqiInfo ? `<span style="color: ${aqiInfo.level.includes('good') ? '#34d399' : aqiInfo.level.includes('hazardous') ? '#f87171' : '#fbbf24'}">${aqiInfo.icon} ${aqiInfo.category}</span>` : ''}
+      `;
+      tooltip.style.display = "block";
+      tooltip.style.left = (e.clientX - rect.left + 15) + "px";
+      tooltip.style.top = (e.clientY - rect.top - 15) + "px";
+    });
+    
+    circle.addEventListener("mousemove", (e) => {
+      const rect = wrap.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 15) + "px";
+      tooltip.style.top = (e.clientY - rect.top - 15) + "px";
+    });
+    
+    circle.addEventListener("mouseleave", () => {
+      tooltip.style.display = "none";
+    });
+    
+    svg.append(circle);
+  });
+  
   series.forEach((row, index) => {
     if (row.value !== null) return;
     const x = xAt(index);
@@ -387,6 +574,17 @@ function renderDashboard(data) {
       : "No prior successful run is separately persisted",
   );
   text("run-detail", `${pipeline.success_history_note} Latest run ID: ${pipeline.latest_run_id || "unavailable"}.`);
+  
+  // Render health widget with latest PM2.5
+  const latestPM25 = data.historical.series.length > 0 
+    ? data.historical.series[data.historical.series.length - 1].value 
+    : null;
+  renderHealthWidget(latestPM25);
+  
+  // Render stats cards and heatmap
+  renderStatsCards(data.historical.series);
+  renderCalendarHeatmap(data.historical.series);
+  
   renderLive(data.live || { status: "unavailable", sensors: [] });
   renderChart(data.historical.series, data.historical.unit);
   const missingDates = data.historical.missing_dates || [];
@@ -408,6 +606,9 @@ function renderDashboard(data) {
   text("page-generated", `Dashboard data assembled ${data.generated_at_utc}`);
   document.getElementById("dashboard-content").hidden = false;
   document.getElementById("loading").hidden = true;
+  
+  // Setup export functionality
+  setupExportButtons(data.historical.series);
 }
 
 function renderInsight(result) {
@@ -457,6 +658,81 @@ async function loadDashboard() {
   }
 }
 
+// Export Functionality
+function setupExportButtons(series) {
+  const exportCsvBtn = document.getElementById("export-csv");
+  const exportChartBtn = document.getElementById("export-chart");
+  
+  if (exportCsvBtn) {
+    exportCsvBtn.addEventListener("click", () => exportToCSV(series));
+  }
+  
+  if (exportChartBtn) {
+    exportChartBtn.addEventListener("click", () => exportChartAsImage());
+  }
+}
+
+function exportToCSV(series) {
+  if (!series || series.length === 0) {
+    alert("No data available to export");
+    return;
+  }
+  
+  // Create CSV content
+  let csvContent = "Date,PM2.5 (µg/m³)\n";
+  series.forEach(row => {
+    const value = row.value !== null && row.value !== undefined ? row.value : "";
+    csvContent += `${row.date},${value}\n`;
+  });
+  
+  // Create download link
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `karachi-air-quality-${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportChartAsImage() {
+  const svg = document.querySelector("#chart-wrap svg");
+  if (!svg) {
+    alert("No chart available to export");
+    return;
+  }
+  
+  // Get SVG data
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const img = new Image();
+  
+  // Set canvas size
+  canvas.width = 1200;
+  canvas.height = 400;
+  
+  // Fill white background
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  img.onload = function() {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `karachi-pm25-chart-${new Date().toISOString().split('T')[0]}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+  };
+  
+  const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+  const svgUrl = URL.createObjectURL(svgBlob);
+  img.src = svgUrl;
+}
+
 async function askQuestion(question) {
   const button = document.getElementById("ask-button");
   const panel = document.getElementById("answer-panel");
@@ -496,5 +772,341 @@ document.querySelectorAll(".chip-button").forEach((button) => {
     if (question) askQuestion(question);
   });
 });
+
+// Chat Widget Functionality
+const chatWidgetButton = document.getElementById("chat-widget-button");
+const chatWidgetModal = document.getElementById("chat-widget-modal");
+const chatWidgetClose = document.getElementById("chat-widget-close");
+const chatWidgetContent = document.getElementById("chat-widget-content");
+const chatWidgetInput = document.getElementById("chat-widget-input");
+const chatWidgetSend = document.getElementById("chat-widget-send");
+
+let chatHistory = [];
+
+function toggleChatWidget() {
+  const isOpen = chatWidgetModal.classList.contains("open");
+  if (isOpen) {
+    chatWidgetModal.classList.remove("open");
+    chatWidgetButton.classList.remove("active");
+    chatWidgetButton.innerHTML = "💬";
+  } else {
+    chatWidgetModal.classList.add("open");
+    chatWidgetButton.classList.add("active");
+    chatWidgetButton.innerHTML = "×";
+    chatWidgetInput.focus();
+  }
+}
+
+function addChatMessage(role, content, meta = null) {
+  const messageDiv = element("div", `chat-message ${role}`);
+  const avatar = element("div", "chat-avatar", role === "user" ? "You" : "AI");
+  const bubble = element("div", "chat-bubble");
+  
+  if (typeof content === "string") {
+    bubble.textContent = content;
+  } else {
+    bubble.appendChild(content);
+  }
+  
+  if (meta) {
+    const metaDiv = element("div", "chat-bubble-meta", meta);
+    bubble.appendChild(metaDiv);
+  }
+  
+  messageDiv.appendChild(avatar);
+  messageDiv.appendChild(bubble);
+  
+  if (chatHistory.length === 0) {
+    chatWidgetContent.innerHTML = "";
+  }
+  
+  chatWidgetContent.appendChild(messageDiv);
+  chatWidgetContent.scrollTop = chatWidgetContent.scrollHeight;
+  
+  chatHistory.push({ role, content, meta });
+}
+
+async function sendChatMessage(question) {
+  if (!question.trim()) return;
+  
+  addChatMessage("user", question);
+  chatWidgetInput.value = "";
+  chatWidgetSend.disabled = true;
+  
+  const thinkingDiv = element("div", "");
+  thinkingDiv.innerHTML = "Analyzing evidence...";
+  addChatMessage("agent", thinkingDiv);
+  
+  try {
+    const response = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ question }),
+    });
+    const result = await response.json();
+    
+    chatWidgetContent.removeChild(chatWidgetContent.lastChild);
+    chatHistory.pop();
+    
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    
+    const answerContent = element("div", "");
+    const statusBadge = element("span", `answer-status ${result.status}`, result.status.replaceAll("_", " "));
+    answerContent.appendChild(statusBadge);
+    answerContent.appendChild(document.createElement("br"));
+    answerContent.appendChild(document.createTextNode(result.answer));
+    
+    if (result.evidence && result.evidence.length) {
+      const evidenceTitle = element("strong", "", "Evidence: ");
+      answerContent.appendChild(document.createElement("br"));
+      answerContent.appendChild(document.createElement("br"));
+      answerContent.appendChild(evidenceTitle);
+      answerContent.appendChild(document.createTextNode(result.evidence.map(e => e.source_file).join(", ")));
+    }
+    
+    const meta = `${result.data_as_of} · ${result.generated_at}`;
+    addChatMessage("agent", answerContent, meta);
+    
+  } catch (error) {
+    chatWidgetContent.removeChild(chatWidgetContent.lastChild);
+    chatHistory.pop();
+    addChatMessage("agent", `Error: ${error.message}`);
+  } finally {
+    chatWidgetSend.disabled = false;
+  }
+}
+
+chatWidgetButton.addEventListener("click", toggleChatWidget);
+chatWidgetClose.addEventListener("click", toggleChatWidget);
+
+chatWidgetSend.addEventListener("click", () => {
+  sendChatMessage(chatWidgetInput.value.trim());
+});
+
+chatWidgetInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage(chatWidgetInput.value.trim());
+  }
+});
+
+document.querySelectorAll(".chat-widget-example-btn").forEach((button) => {
+  button.addEventListener("click", () => {
+    const question = button.getAttribute("data-question");
+    if (question) sendChatMessage(question);
+  });
+});
+
+// Keyboard Shortcuts
+document.addEventListener("keydown", (e) => {
+  // Don't trigger if user is typing in an input
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+  
+  const key = e.key.toLowerCase();
+  
+  if (key === "d") {
+    e.preventDefault();
+    document.getElementById("theme-toggle").click();
+  } else if (key === "e") {
+    e.preventDefault();
+    const exportBtn = document.getElementById("export-csv");
+    if (exportBtn) exportBtn.click();
+  } else if (key === "/") {
+    e.preventDefault();
+    const chatBtn = document.getElementById("chat-widget-button");
+    if (chatBtn) chatBtn.click();
+  } else if (key === "s") {
+    e.preventDefault();
+    const shareBtn = document.getElementById("share-twitter");
+    if (shareBtn) shareBtn.click();
+  } else if (key === "?" || (e.shiftKey && key === "/")) {
+    e.preventDefault();
+    toggleShortcutsModal();
+  } else if (key === "escape") {
+    hideShortcutsModal();
+  }
+});
+
+function toggleShortcutsModal() {
+  const modal = document.getElementById("shortcuts-modal");
+  const overlay = document.getElementById("shortcuts-overlay");
+  const isVisible = modal.classList.contains("visible");
+  
+  if (isVisible) {
+    modal.classList.remove("visible");
+    overlay.classList.remove("visible");
+  } else {
+    modal.classList.add("visible");
+    overlay.classList.add("visible");
+  }
+}
+
+function hideShortcutsModal() {
+  document.getElementById("shortcuts-modal").classList.remove("visible");
+  document.getElementById("shortcuts-overlay").classList.remove("visible");
+}
+
+document.getElementById("shortcuts-overlay")?.addEventListener("click", hideShortcutsModal);
+
+// Stats Summary Cards
+function renderStatsCards(series) {
+  if (!series || series.length === 0) return;
+  
+  // Get the latest year from data
+  const latestYear = series.length > 0 ? series[series.length - 1].date.substring(0, 4) : "2024";
+  const currentYearData = series.filter(row => row.date.startsWith(latestYear) && typeof row.value === "number");
+  
+  if (currentYearData.length === 0) {
+    // Use all available data if current year has none
+    const allNumeric = series.filter(row => typeof row.value === "number");
+    if (allNumeric.length === 0) return;
+    
+    // Use last 60 days for trend
+    const last30 = allNumeric.slice(-30);
+    const prev30 = allNumeric.slice(-60, -30);
+    
+    if (last30.length > 0 && prev30.length > 0) {
+      const last30Avg = last30.reduce((sum, r) => sum + r.value, 0) / last30.length;
+      const prev30Avg = prev30.reduce((sum, r) => sum + r.value, 0) / prev30.length;
+      const diff = last30Avg - prev30Avg;
+      const pct = ((diff / prev30Avg) * 100).toFixed(1);
+      
+      text("trend-value", diff < 0 ? "Improving ✓" : "Worsening ✗");
+      text("trend-meta", `${Math.abs(diff).toFixed(1)} µg/m³ (${Math.abs(pct)}%) vs previous period`);
+    }
+    
+    const bestDay = allNumeric.reduce((min, curr) => curr.value < min.value ? curr : min);
+    text("best-day-value", `${bestDay.date}`);
+    text("best-day-meta", `${number(bestDay.value, 1)} µg/m³ - ${getAQIInfo(bestDay.value)?.category || "Good"}`);
+    
+    const worstDay = allNumeric.reduce((max, curr) => curr.value > max.value ? curr : max);
+    text("worst-day-value", `${worstDay.date}`);
+    text("worst-day-meta", `${number(worstDay.value, 1)} µg/m³ - ${getAQIInfo(worstDay.value)?.category || "Hazardous"}`);
+    
+    const unhealthyDays = allNumeric.filter(r => r.value > 55.4).length;
+    const pctUnhealthy = ((unhealthyDays / allNumeric.length) * 100).toFixed(1);
+    text("unhealthy-days-value", `${unhealthyDays} days`);
+    text("unhealthy-days-meta", `${pctUnhealthy}% of records had unhealthy air`);
+    
+    // Update card titles
+    const cards = document.querySelectorAll(".stats-card h4");
+    if (cards[1]) cards[1].textContent = "Best Day (All Time)";
+    if (cards[2]) cards[2].textContent = "Worst Day (All Time)";
+    
+    return;
+  }
+  
+  // Calculate trend (last 30 days vs previous 30 days) for current year
+  const last30 = currentYearData.slice(-30).filter(r => typeof r.value === "number");
+  const prev30 = currentYearData.slice(-60, -30).filter(r => typeof r.value === "number");
+  
+  if (last30.length > 0 && prev30.length > 0) {
+    const last30Avg = last30.reduce((sum, r) => sum + r.value, 0) / last30.length;
+    const prev30Avg = prev30.reduce((sum, r) => sum + r.value, 0) / prev30.length;
+    const diff = last30Avg - prev30Avg;
+    const pct = ((diff / prev30Avg) * 100).toFixed(1);
+    
+    text("trend-value", diff < 0 ? "Improving ✓" : "Worsening ✗");
+    text("trend-meta", `${Math.abs(diff).toFixed(1)} µg/m³ (${Math.abs(pct)}%) vs last month`);
+  }
+  
+  // Best day in current year
+  const bestDay = currentYearData.reduce((min, curr) => 
+    curr.value < min.value ? curr : min
+  );
+  text("best-day-value", `${bestDay.date}`);
+  text("best-day-meta", `${number(bestDay.value, 1)} µg/m³ - ${getAQIInfo(bestDay.value)?.category || "Good"}`);
+  
+  // Worst day in current year
+  const worstDay = currentYearData.reduce((max, curr) => 
+    curr.value > max.value ? curr : max
+  );
+  text("worst-day-value", `${worstDay.date}`);
+  text("worst-day-meta", `${number(worstDay.value, 1)} µg/m³ - ${getAQIInfo(worstDay.value)?.category || "Hazardous"}`);
+  
+  // Unhealthy days (PM2.5 > 55.4) in current year
+  const unhealthyDays = currentYearData.filter(r => r.value > 55.4).length;
+  const pctUnhealthy = ((unhealthyDays / currentYearData.length) * 100).toFixed(1);
+  text("unhealthy-days-value", `${unhealthyDays} days`);
+  text("unhealthy-days-meta", `${pctUnhealthy}% of ${latestYear} had unhealthy air`);
+  
+  // Update card titles to show the actual year
+  const cards = document.querySelectorAll(".stats-card h4");
+  if (cards[1]) cards[1].textContent = `Best Day (${latestYear})`;
+  if (cards[2]) cards[2].textContent = `Worst Day (${latestYear})`;
+}
+
+// Calendar Heatmap
+function renderCalendarHeatmap(series) {
+  const container = document.getElementById("calendar-heatmap");
+  if (!container || !series || series.length === 0) return;
+  
+  container.innerHTML = "";
+  
+  // Get the latest year from data
+  const latestYear = series.length > 0 ? series[series.length - 1].date.substring(0, 4) : "2024";
+  
+  // Update the heading
+  const heatmapHeading = document.querySelector(".heatmap-panel h3");
+  if (heatmapHeading) {
+    heatmapHeading.textContent = `Air Quality Calendar (${latestYear})`;
+  }
+  
+  // Filter data for the latest year
+  const yearData = series.filter(row => row.date.startsWith(latestYear));
+  
+  if (yearData.length === 0) return;
+  
+  // Create map of dates to values
+  const dateMap = {};
+  yearData.forEach(row => {
+    dateMap[row.date] = row.value;
+  });
+  
+  // Generate all days of the year
+  const startDate = new Date(`${latestYear}-01-01`);
+  const endDate = new Date(`${latestYear}-12-31`);
+  
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0];
+    const value = dateMap[dateStr];
+    
+    const cell = document.createElement("div");
+    cell.className = "heatmap-cell";
+    
+    if (value == null) {
+      cell.setAttribute("data-level", "0");
+      cell.title = `${dateStr}: No data`;
+    } else {
+      const aqi = getAQIInfo(value);
+      let level = 1;
+      if (value <= 12) level = 1;
+      else if (value <= 35.4) level = 2;
+      else if (value <= 55.4) level = 3;
+      else if (value <= 150.4) level = 4;
+      else if (value <= 250.4) level = 5;
+      else level = 6;
+      
+      cell.setAttribute("data-level", level);
+      cell.title = `${dateStr}: ${number(value, 1)} µg/m³ - ${aqi?.category || ""}`;
+    }
+    
+    container.appendChild(cell);
+  }
+}
+
+// Share to Twitter
+function shareToTwitter() {
+  const latestData = document.getElementById("last-observation")?.textContent || "latest";
+  const aqiStatus = document.querySelector("#aqi-status")?.textContent || "air quality data";
+  
+  const text = `Check out Karachi's Air Quality Dashboard! Latest data: ${latestData}. Real-time PM2.5 monitoring, health recommendations, and forecasts. #AirQuality #Pakistan #Karachi`;
+  const url = window.location.href;
+  
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+  window.open(twitterUrl, '_blank', 'width=550,height=420');
+}
+
+document.getElementById("share-twitter")?.addEventListener("click", shareToTwitter);
 
 loadDashboard();

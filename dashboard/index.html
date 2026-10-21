@@ -21,6 +21,9 @@
       <a href="#forecast">Forecast</a>
       <a href="#insight">Ask</a>
       <a href="#method">How it works</a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+        <span id="theme-icon">🌙</span>
+      </button>
     </nav>
   </header>
   <main id="main">
@@ -43,6 +46,62 @@
     <div id="error" class="state-card error-card" role="alert" hidden></div>
 
     <div id="dashboard-content" hidden>
+      
+      <!-- Health Recommendation Widget -->
+      <div class="health-widget" id="health-widget">
+        <div class="health-widget-header">
+          <div class="health-widget-icon" id="health-icon">🏥</div>
+          <div>
+            <h3 class="health-widget-title">Today's Air Quality</h3>
+            <p class="health-widget-subtitle">Based on latest PM2.5 measurement</p>
+          </div>
+        </div>
+        <div id="aqi-status"></div>
+        <div class="health-recommendations" id="health-rec">
+          <h4>What should you do?</h4>
+          <ul id="health-rec-list"></ul>
+        </div>
+      </div>
+      
+      <!-- Stats Summary Cards -->
+      <div class="stats-summary-grid" id="stats-summary">
+        <article class="stats-card">
+          <div class="stats-icon">📈</div>
+          <div class="stats-content">
+            <h4>Air Quality Trend</h4>
+            <p class="stats-value" id="trend-value">—</p>
+            <p class="stats-meta" id="trend-meta">—</p>
+          </div>
+        </article>
+        
+        <article class="stats-card">
+          <div class="stats-icon">🏆</div>
+          <div class="stats-content">
+            <h4>Best Day (2024)</h4>
+            <p class="stats-value" id="best-day-value">—</p>
+            <p class="stats-meta" id="best-day-meta">—</p>
+          </div>
+        </article>
+        
+        <article class="stats-card">
+          <div class="stats-icon">⚠️</div>
+          <div class="stats-content">
+            <h4>Worst Day (2024)</h4>
+            <p class="stats-value" id="worst-day-value">—</p>
+            <p class="stats-meta" id="worst-day-meta">—</p>
+          </div>
+        </article>
+        
+        <article class="stats-card">
+          <div class="stats-icon">🚨</div>
+          <div class="stats-content">
+            <h4>Unhealthy Days</h4>
+            <p class="stats-value" id="unhealthy-days-value">—</p>
+            <p class="stats-meta" id="unhealthy-days-meta">—</p>
+          </div>
+        </article>
+      </div>
+      
       <section aria-labelledby="overview-heading">
         <div class="section-heading">
           <div><p class="eyebrow">01 / SNAPSHOT</p><h2 id="overview-heading">Historical dataset overview</h2></div>
@@ -75,8 +134,43 @@
       <section id="history" aria-labelledby="history-heading">
         <div class="section-heading">
           <div><p class="eyebrow">03 / OBSERVATIONS</p><h2 id="history-heading">Historical PM2.5</h2></div>
-          <span class="unit-chip">µg/m³</span>
+          <div class="section-actions">
+            <button class="export-button" id="share-twitter">
+              <span>🐦</span> Share
+            </button>
+            <button class="export-button" id="export-csv">
+              <span>📊</span> Export CSV
+            </button>
+            <button class="export-button" id="export-chart">
+              <span>📷</span> Export Chart
+            </button>
+            <span class="unit-chip">µg/m³</span>
+          </div>
         </div>
+        
+        <!-- Calendar Heatmap -->
+        <article class="panel heatmap-panel">
+          <div class="panel-heading">
+            <div>
+              <h3>Air Quality Calendar</h3>
+              <p>Visual heatmap showing daily air quality patterns. Darker colors indicate worse air quality.</p>
+            </div>
+          </div>
+          <div id="calendar-heatmap" class="calendar-heatmap"></div>
+          <div class="heatmap-legend">
+            <span class="legend-label">Better</span>
+            <div class="legend-colors">
+              <span class="legend-box legend-good" title="Good"></span>
+              <span class="legend-box legend-moderate" title="Moderate"></span>
+              <span class="legend-box legend-sensitive" title="Sensitive"></span>
+              <span class="legend-box legend-unhealthy" title="Unhealthy"></span>
+              <span class="legend-box legend-very-unhealthy" title="Very Unhealthy"></span>
+              <span class="legend-box legend-hazardous" title="Hazardous"></span>
+            </div>
+            <span class="legend-label">Worse</span>
+          </div>
+        </article>
+        
         <article class="panel chart-panel">
           <div class="panel-heading"><div><h3>Daily published PAQI series</h3><p>Blank source measurements appear as visible breaks, never interpolated values.</p></div></div>
           <div id="chart-wrap" class="chart-wrap" aria-busy="true"><p class="muted">Preparing chart…</p></div>
@@ -192,6 +286,83 @@
       </section>
     </div>
   </main>
+  
+  <!-- Floating Chat Widget -->
+  <button class="chat-widget-button" id="chat-widget-button" aria-label="Open Insight Agent chat">
+    💬
+  </button>
+  
+  <div class="chat-widget-modal" id="chat-widget-modal">
+    <div class="chat-widget-header">
+      <div>
+        <h3>Insight Agent</h3>
+        <p>Ask about data, quality, or forecast</p>
+      </div>
+      <button class="chat-widget-close" id="chat-widget-close" aria-label="Close chat">×</button>
+    </div>
+    
+    <div class="chat-widget-examples">
+      <p>Quick questions:</p>
+      <div class="chat-widget-examples-grid">
+        <button class="chat-widget-example-btn" data-question="What date range and how many observations are available?">📊 Coverage & observations</button>
+        <button class="chat-widget-example-btn" data-question="How many PM2.5 readings are missing?">📉 Missing values</button>
+        <button class="chat-widget-example-btn" data-question="How did the model compare with persistence on the held-out test set?">🎯 Forecast vs baseline</button>
+        <button class="chat-widget-example-btn" data-question="What is the latest live sensor PM2.5 reading?">🔴 Live sensor data</button>
+      </div>
+    </div>
+    
+    <div class="chat-widget-content" id="chat-widget-content">
+      <div class="chat-widget-empty">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+        <p>Ask me anything about the air quality data, quality checks, or forecast evaluation.</p>
+      </div>
+    </div>
+    
+    <div class="chat-widget-input-area">
+      <div class="chat-widget-input-wrapper">
+        <textarea id="chat-widget-input" placeholder="Ask a question..." rows="1" maxlength="1000"></textarea>
+        <button class="chat-widget-send" id="chat-widget-send" aria-label="Send message">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Keyboard Shortcuts Modal -->
+  <div class="shortcuts-overlay" id="shortcuts-overlay"></div>
+  <div class="shortcuts-modal" id="shortcuts-modal">
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <div class="shortcut-item">
+      <span class="shortcut-desc">Toggle dark mode</span>
+      <kbd class="shortcut-key">D</kbd>
+    </div>
+    <div class="shortcut-item">
+      <span class="shortcut-desc">Export CSV</span>
+      <kbd class="shortcut-key">E</kbd>
+    </div>
+    <div class="shortcut-item">
+      <span class="shortcut-desc">Open chat widget</span>
+      <kbd class="shortcut-key">/</kbd>
+    </div>
+    <div class="shortcut-item">
+      <span class="shortcut-desc">Share on Twitter</span>
+      <kbd class="shortcut-key">S</kbd>
+    </div>
+    <div class="shortcut-item">
+      <span class="shortcut-desc">Show shortcuts</span>
+      <kbd class="shortcut-key">?</kbd>
+    </div>
+    <div class="shortcut-item">
+      <span class="shortcut-desc">Close modal</span>
+      <kbd class="shortcut-key">Esc</kbd>
+    </div>
+  </div>
+  
   <footer><span>HackInsight '26 · Air Quality Intelligence for Pakistan</span><span id="page-generated"></span></footer>
 </body>
 </html>
