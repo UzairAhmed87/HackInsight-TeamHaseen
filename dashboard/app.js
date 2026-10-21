@@ -273,7 +273,7 @@ function renderChart(series, unit, otherSeries = []) {
       circle.setAttribute("r", "2.5");
       circle.setAttribute("class", `chart-point-other ${OTHER_SERIES_CLASS[item.source_id] || "chart-series-other"}`);
       circle.addEventListener("mouseenter", (event) =>
-        showTooltip(event, [row.date, `PM2.5: ${number(row.value, 1)} µg/m³`, item.label]),
+        showTooltip(event, [formatWhen(row.date), `PM2.5: ${number(row.value, 1)} µg/m³`, item.label]),
       );
       circle.addEventListener("mousemove", (event) => showTooltip(event, null));
       circle.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
@@ -311,7 +311,7 @@ function renderChart(series, unit, otherSeries = []) {
       const rect = wrap.getBoundingClientRect();
       const aqiInfo = getAQIInfo(row.value);
       tooltip.innerHTML = `
-        <strong>${row.date}</strong><br>
+        <strong>${formatWhen(row.date)}</strong><br>
         PM2.5: ${number(row.value, 1)} µg/m³<br>
         ${aqiInfo ? `<span style="color: ${aqiInfo.level.includes('good') ? '#34d399' : aqiInfo.level.includes('hazardous') ? '#f87171' : '#fbbf24'}">${aqiInfo.icon} ${aqiInfo.category}</span>` : ''}
       `;
@@ -346,7 +346,7 @@ function renderChart(series, unit, otherSeries = []) {
     marker.setAttribute("stroke-dasharray", "2 4");
     marker.setAttribute("opacity", ".45");
     const title = document.createElementNS(svg.namespaceURI, "title");
-    title.textContent = `No PM2.5 value reported on ${row.date}`;
+    title.textContent = `No PM2.5 value reported on ${formatWhen(row.date)}`;
     marker.append(title);
     svg.append(marker);
   });
@@ -373,7 +373,7 @@ function renderChart(series, unit, otherSeries = []) {
     item.append(element("span", `chart-legend-swatch ${className}`), document.createTextNode(label));
     legend.append(item);
   };
-  legendItem("chart-series-paqi", "PAQI Karachi daily (published, ends " + series[series.length - 1].date + ")");
+  legendItem("chart-series-paqi", "PAQI Karachi daily (published, ends " + formatWhen(series[series.length - 1].date) + ")");
   for (const item of others) legendItem(OTHER_SERIES_CLASS[item.source_id] || "chart-series-other", item.label);
   wrap.append(legend);
 }
@@ -407,7 +407,7 @@ function renderYearTable(rows) {
 function renderQuality(quality) {
   setStatusBadge(document.getElementById("quality-badge"), quality.pipeline_status);
   text("quality-run-id", quality.run_id || "Unavailable");
-  text("quality-run-time", quality.checked_at_utc || "Unavailable");
+  text("quality-run-time", quality.checked_at_utc ? formatWhen(quality.checked_at_utc) : "Unavailable");
   text("quality-count-scope", quality.count_scope || "current run only");
   const counts = quality.counts || {};
   const countWrap = document.getElementById("quality-counts");
@@ -464,7 +464,7 @@ function renderForecast(forecast) {
     const card = element("article", "panel forecast-card");
     card.append(element("h3", "", title));
     const dates = split.dates || {};
-    card.append(element("p", "forecast-dates", `${dates.start || "—"} to ${dates.end || "—"}`));
+    card.append(element("p", "forecast-dates", `${formatWhen(dates.start) || "—"} to ${formatWhen(dates.end) || "—"}`));
     const heading = element("div", "score-row score-head");
     ["Metric", "Linear model", "Persistence*"].forEach((label) => heading.append(element("span", "", label)));
     card.append(heading);
@@ -484,7 +484,7 @@ function renderForecast(forecast) {
   });
   text(
     "forecast-caveat",
-    "* Persistence is evaluated on the same dates as the linear model. Negative deltas favor the model. The test improvement is modest and descriptive; no statistical significance is claimed. Backtesting ends 2024-12-31 and is not an operational/current forecast.",
+    "* Persistence is evaluated on the same dates as the linear model. Negative deltas favor the model. The test improvement is modest and descriptive; no statistical significance is claimed. Backtesting ends 31 Dec 2024 and is not an operational/current forecast.",
   );
 }
 
@@ -528,7 +528,7 @@ function renderLive(live) {
     const meta = element(
       "p",
       "muted",
-      `Observed ${primary.observation_time_pkt || primary.observation_time_utc || "—"} · fetched ${primary.fetched_at_pkt || primary.fetched_at_utc || "—"} · ${String(primary.freshness || "unavailable")}`,
+      `Observed ${formatWhen(primary.observation_time_pkt || primary.observation_time_utc || "—")} · fetched ${formatWhen(primary.fetched_at_pkt || primary.fetched_at_utc || "—")} · ${String(primary.freshness || "unavailable")}`,
     );
     const area = element("p", "muted", `${primary.area || "Karachi"} · AirGradient id ${primary.location_id}`);
     const status = element("span", freshnessClass(primary.freshness), String(primary.freshness || "unavailable"));
@@ -568,7 +568,7 @@ function renderLive(live) {
         "muted",
         sensor.error
           ? `Fetch issue: ${sensor.error}`
-          : `Observed ${sensor.observation_time_pkt || "—"}`,
+          : `Observed ${formatWhen(sensor.observation_time_pkt || sensor.observation_time_utc || "—")}`,
       ),
     );
     grid.append(card);
@@ -605,6 +605,23 @@ function renderHowItWorks(steps) {
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const ISO_STAMP = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?Z/g;
+
+function formatWhen(value) {
+  if (typeof value !== "string") return value == null ? "" : String(value);
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?Z)?$/);
+  if (!match) return value;
+  const month = MONTHS[Number(match[2]) - 1];
+  if (!month) return value;
+  const date = `${Number(match[3])} ${month} ${match[1]}`;
+  if (!match[4]) return date;
+  const seconds = match[6] && match[6] !== "00" ? `:${match[6]}` : "";
+  return `${date}, ${match[4]}:${match[5]}${seconds} UTC`;
+}
+
+function formatWhenInText(value) {
+  return String(value == null ? "" : value).replace(ISO_STAMP, (stamp) => formatWhen(stamp));
+}
 const SOURCE_COLORS = {
   paqi: "var(--primary)",
   us_consulate_karachi_pm25: "#f97316",
@@ -642,7 +659,7 @@ function renderGlance(data) {
   text(
     "glance-network-foot",
     hour.datetime_to_utc
-      ? `Median of ${hour.sensors_reporting} of ${hour.sensors_configured} Urban Unit sensors · hour ending ${hour.datetime_to_utc.replace("T", " ").replace(":00Z", " UTC")}`
+      ? `Median of ${hour.sensors_reporting} of ${hour.sensors_configured} Urban Unit sensors · hour ending ${formatWhen(hour.datetime_to_utc)}`
       : "No network hour available in this build",
   );
   const warehouse = data.warehouse || {};
@@ -656,7 +673,7 @@ function renderGlance(data) {
   );
   const pipeline = data.overview.pipeline || {};
   const finished = pipeline.latest_finished_at_utc || "";
-  text("glance-run", finished ? finished.replace("T", " ").replace("Z", " UTC") : "—");
+  text("glance-run", finished ? formatWhen(finished) : "—");
   text("glance-run-foot", `${String(pipeline.latest_status || "unknown").replaceAll("_", " ")} · hourly Prefect flow`);
 }
 
@@ -819,7 +836,7 @@ function renderNetwork(network) {
     { colorFor: aqiColor, marker: typeof hour.median_pm25_ug_m3 === "number" ? { value: hour.median_pm25_ug_m3, label: `Network median ${hour.median_pm25_ug_m3}` } : null },
   );
   if (hour.datetime_to_utc) {
-    text("network-subtitle", `Hour ending ${hour.datetime_to_utc.replace("T", " ").replace(":00Z", " UTC")} · ${hour.sensors_reporting} of ${hour.sensors_configured} sensors reporting. The thin line marks the network median.`);
+    text("network-subtitle", `Hour ending ${formatWhen(hour.datetime_to_utc)} · ${hour.sensors_reporting} of ${hour.sensors_configured} sensors reporting. The thin line marks the network median.`);
     text(
       "network-takeaway",
       `Readings span ${number(hour.min_pm25_ug_m3, 1)}–${number(hour.max_pm25_ug_m3, 1)} µg/m³ across neighbourhoods in the same hour, which is why a single sensor is never presented as a citywide value.`,
@@ -872,23 +889,23 @@ function newestSeries(historical) {
 
 function renderDashboard(data) {
   const overview = data.overview;
-  text("date-range", `${overview.start_date} – ${overview.end_date}`);
+  text("date-range", `${formatWhen(overview.start_date)} – ${formatWhen(overview.end_date)}`);
   text("dated-count", integer(overview.dated_records));
   text("numeric-count", integer(overview.numeric_readings));
   text("missing-count", integer(overview.missing_readings));
   const freshness = overview.freshness;
   const latest = overview.latest_any_source;
-  text("last-observation", latest ? latest.date : freshness.last_observation_date);
+  text("last-observation", formatWhen(latest ? latest.date : freshness.last_observation_date));
   text(
     "freshness-label",
     latest
-      ? `Newest daily reading ${latest.date} (${latest.source}, ${latest.age_days === 1 ? "1 day" : `${integer(latest.age_days)} days`} old). The published PAQI series ends ${freshness.last_observation_date}.`
-      : `Historical last observation ${freshness.last_observation_date} · ${integer(freshness.age_days)} days old. Live sensors are a separate feed below.`,
+      ? `Newest daily reading ${formatWhen(latest.date)} (${latest.source}, ${latest.age_days === 1 ? "1 day" : `${integer(latest.age_days)} days`} old). The published PAQI series ends ${formatWhen(freshness.last_observation_date)}.`
+      : `Historical last observation ${formatWhen(freshness.last_observation_date)} · ${integer(freshness.age_days)} days old. Live sensors are a separate feed below.`,
   );
   text(
     "stale-detail",
     latest
-      ? `${latest.source}. PAQI published file ends ${freshness.last_observation_date}.`
+      ? `${latest.source}. PAQI published file ends ${formatWhen(freshness.last_observation_date)}.`
       : freshness.is_stale
         ? `Historical series exceeds the ${freshness.warning_threshold_days}-day warning threshold.`
         : `Historical series within the ${freshness.warning_threshold_days}-day warning threshold.`,
@@ -899,7 +916,7 @@ function renderDashboard(data) {
   text(
     "last-run",
     lastSuccess
-      ? lastSuccess.finished_at_utc || lastSuccess.run_id || "Recorded successful run"
+      ? formatWhen(lastSuccess.finished_at_utc) || lastSuccess.run_id || "Recorded successful run"
       : "No prior successful run is separately persisted",
   );
   text("run-detail", `${pipeline.success_history_note} Latest run ID: ${pipeline.latest_run_id || "unavailable"}.`);
@@ -913,7 +930,7 @@ function renderDashboard(data) {
   renderHealthWidget(latestPM25);
   
   const recent = newestSeries(data.historical);
-  text("health-widget-subtitle", latest ? `Daily PM2.5 for ${latest.date} · ${latest.source}` : "Based on latest PM2.5 measurement");
+  text("health-widget-subtitle", latest ? `Daily PM2.5 for ${formatWhen(latest.date)} · ${latest.source}` : "Based on latest PM2.5 measurement");
   text("stats-source", `Cards and calendar use ${recent.label}, the source with the most recent data.`);
   text("heatmap-subtitle", `${recent.label}. Darker colours indicate worse air quality; grey days have no complete reading.`);
   renderStatsCards(recent.points);
@@ -952,7 +969,7 @@ function renderDashboard(data) {
   renderAgreement(insights.agreement, (data.warehouse || {}).cross_source);
   renderNetwork(insights.network);
   renderSeasonErrors(data.forecast || {});
-  text("page-generated", `Dashboard data assembled ${data.generated_at_utc}`);
+  text("page-generated", `Dashboard data assembled ${formatWhen(data.generated_at_utc)}`);
   document.getElementById("dashboard-content").hidden = false;
   document.getElementById("loading").hidden = true;
   
@@ -976,7 +993,7 @@ function renderInsight(result) {
   const explanation = result.explanation || {};
   if (explanation.used) {
     panel.append(element("h3", "", "Plain-language explanation"));
-    const copy = element("p", "answer-copy", explanation.text);
+    const copy = element("p", "answer-copy", formatWhenInText(explanation.text));
     if (explanation.language === "ur") {
       copy.setAttribute("lang", "ur");
       copy.setAttribute("dir", "rtl");
@@ -985,8 +1002,8 @@ function renderInsight(result) {
     panel.append(element("p", "answer-meta", `AI-generated by ${explanation.model}; every number was checked against the cited evidence [E1…].`));
   }
   panel.append(element("h3", "", urdu ? "English (verified)" : explanation.used ? "Verified answer" : "Evidence-grounded answer"));
-  panel.append(element("p", "answer-copy", result.answer));
-  panel.append(element("p", "answer-meta", `Data as of ${result.data_as_of} · Generated ${result.generated_at}`));
+    panel.append(element("p", "answer-copy", formatWhenInText(result.answer)));
+  panel.append(element("p", "answer-meta", `Data as of ${formatWhen(result.data_as_of)} · Generated ${formatWhen(result.generated_at)}`));
   if (result.evidence && result.evidence.length) {
     panel.append(element("h3", "", "Evidence references"));
     const list = element("ul", "evidence-list");
@@ -995,7 +1012,7 @@ function renderInsight(result) {
       entry.append(element("strong", "", `[E${list.children.length + 1}] `));
       entry.append(element("code", "", item.source_file));
       if (item.locator) entry.append(document.createTextNode(` · ${item.locator}`));
-      if (item.date_range) entry.append(document.createTextNode(` · ${item.date_range.start} to ${item.date_range.end}`));
+      if (item.date_range) entry.append(document.createTextNode(` · ${formatWhen(item.date_range.start)} to ${formatWhen(item.date_range.end)}`));
       const rowIds = item.row_ids || item.sample_row_ids || [];
       if (rowIds.length) {
         const ids = element("div", "muted", `Row IDs: ${rowIds.join(", ")}`);
@@ -1019,14 +1036,14 @@ function renderSecondSource(warehouse) {
     text("second-source-publisher", "Second-source warehouse report is not available for this build.");
     return;
   }
-  text("second-source-publisher", `${second.publisher}. ${number(second.gold_rows, 0)} hourly gold rows, latest ${second.latest_observation}.`);
+  text("second-source-publisher", `${second.publisher}. ${number(second.gold_rows, 0)} hourly gold rows, latest ${formatWhen(second.latest_observation)}.`);
   setSafeLink(document.getElementById("second-source-link"), second.access, "Open OpenAQ location record ↗");
   text("second-source-license", `Licence: ${second.license}. Quality status: ${String(second.status).replaceAll("_", " ")}.`);
   const cross = warehouse.cross_source || {};
   text(
     "cross-source-summary",
     cross.paired_days
-      ? `Agreement with PAQI on ${number(cross.paired_days, 0)} shared days (${cross.first_paired_date} → ${cross.last_paired_date}): Pearson r = ${cross.pearson_r}, mean difference ${cross.mean_difference_paqi_minus_consulate} µg/m³ (PAQI − Consulate), ${cross.large_disagreement_days} days flagged for large disagreement.`
+      ? `Agreement with PAQI on ${number(cross.paired_days, 0)} shared days (${formatWhen(cross.first_paired_date)} → ${formatWhen(cross.last_paired_date)}): Pearson r = ${cross.pearson_r}, mean difference ${cross.mean_difference_paqi_minus_consulate} µg/m³ (PAQI − Consulate), ${cross.large_disagreement_days} days flagged for large disagreement.`
       : "Cross-source agreement was not computed in this build.",
   );
   const network = (warehouse.sources || []).find((item) => item.source_id === "urban_unit_karachi_airgradient_pm25");
@@ -1036,7 +1053,7 @@ function renderSecondSource(warehouse) {
   text("network-source-license", `Licence: ${network.license}. Quality status: ${String(network.status).replaceAll("_", " ")}.`);
   text(
     "network-source-freshness",
-    `Latest hour in warehouse: ${network.latest_observation} (${number(network.latest_age_hours, 1)} h old when the pipeline last ran). Warehouse total: ${number(warehouse.total_gold_rows, 0)} gold rows across ${(warehouse.sources || []).length} sources.`,
+    `Latest hour in warehouse: ${formatWhen(network.latest_observation)} (${number(network.latest_age_hours, 1)} h old when the pipeline last ran). Warehouse total: ${number(warehouse.total_gold_rows, 0)} gold rows across ${(warehouse.sources || []).length} sources.`,
   );
 }
 
@@ -1165,7 +1182,7 @@ function setAnswerLanguage(language) {
 }
 
 function urduParagraph(textValue, className = "answer-copy") {
-  const node = appendMixedUrdu(element("p", `${className} urdu-text`), textValue);
+  const node = appendMixedUrdu(element("p", `${className} urdu-text`), formatWhenInText(textValue));
   node.setAttribute("lang", "ur");
   node.setAttribute("dir", "rtl");
   return node;
@@ -1306,7 +1323,7 @@ async function sendChatMessage(question) {
       answerContent.appendChild(document.createElement("br"));
     }
     if (result.explanation && result.explanation.used) {
-      const explained = element("p", "", result.explanation.text);
+      const explained = element("p", "", formatWhenInText(result.explanation.text));
       if (result.explanation.language === "ur") {
         explained.setAttribute("lang", "ur");
         explained.setAttribute("dir", "rtl");
@@ -1315,17 +1332,17 @@ async function sendChatMessage(question) {
       answerContent.appendChild(element("small", "muted", `AI explanation (${result.explanation.model}), numbers checked against evidence. Verified answer:`));
       answerContent.appendChild(document.createElement("br"));
     }
-    answerContent.appendChild(document.createTextNode(result.answer));
+    answerContent.appendChild(document.createTextNode(formatWhenInText(result.answer)));
     
     if (result.evidence && result.evidence.length) {
       const evidenceTitle = element("strong", "", "Evidence: ");
       answerContent.appendChild(document.createElement("br"));
       answerContent.appendChild(document.createElement("br"));
       answerContent.appendChild(evidenceTitle);
-      answerContent.appendChild(document.createTextNode(result.evidence.map(e => e.source_file).join(", ")));
+      answerContent.appendChild(document.createTextNode(result.evidence.map((item) => item.source_file.replaceAll("/", "/\u200b")).join(", ")));
     }
     
-    const meta = `${result.data_as_of} · ${result.generated_at}`;
+    const meta = `${formatWhen(result.data_as_of)} · ${formatWhen(result.generated_at)}`;
     addChatMessage("agent", answerContent, meta);
     
   } catch (error) {
@@ -1441,11 +1458,11 @@ function renderStatsCards(series) {
     }
     
     const bestDay = allNumeric.reduce((min, curr) => curr.value < min.value ? curr : min);
-    text("best-day-value", `${bestDay.date}`);
+    text("best-day-value", formatWhen(bestDay.date));
     text("best-day-meta", `${number(bestDay.value, 1)} µg/m³ - ${getAQIInfo(bestDay.value)?.category || "Good"}`);
     
     const worstDay = allNumeric.reduce((max, curr) => curr.value > max.value ? curr : max);
-    text("worst-day-value", `${worstDay.date}`);
+    text("worst-day-value", formatWhen(worstDay.date));
     text("worst-day-meta", `${number(worstDay.value, 1)} µg/m³ - ${getAQIInfo(worstDay.value)?.category || "Hazardous"}`);
     
     const unhealthyDays = allNumeric.filter(r => r.value > 55.4).length;
@@ -1479,14 +1496,14 @@ function renderStatsCards(series) {
   const bestDay = currentYearData.reduce((min, curr) => 
     curr.value < min.value ? curr : min
   );
-  text("best-day-value", `${bestDay.date}`);
+  text("best-day-value", formatWhen(bestDay.date));
   text("best-day-meta", `${number(bestDay.value, 1)} µg/m³ - ${getAQIInfo(bestDay.value)?.category || "Good"}`);
   
   // Worst day in current year
   const worstDay = currentYearData.reduce((max, curr) => 
     curr.value > max.value ? curr : max
   );
-  text("worst-day-value", `${worstDay.date}`);
+  text("worst-day-value", formatWhen(worstDay.date));
   text("worst-day-meta", `${number(worstDay.value, 1)} µg/m³ - ${getAQIInfo(worstDay.value)?.category || "Hazardous"}`);
   
   // Unhealthy days (PM2.5 > 55.4) in current year
@@ -1541,7 +1558,7 @@ function renderCalendarHeatmap(series) {
     
     if (value == null) {
       cell.setAttribute("data-level", "0");
-      cell.title = `${dateStr}: No data`;
+      cell.title = `${formatWhen(dateStr)}: No data`;
     } else {
       const aqi = getAQIInfo(value);
       let level = 1;
@@ -1553,7 +1570,7 @@ function renderCalendarHeatmap(series) {
       else level = 6;
       
       cell.setAttribute("data-level", level);
-      cell.title = `${dateStr}: ${number(value, 1)} µg/m³ - ${aqi?.category || ""}`;
+      cell.title = `${formatWhen(dateStr)}: ${number(value, 1)} µg/m³ - ${aqi?.category || ""}`;
     }
     
     container.appendChild(cell);
