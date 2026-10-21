@@ -58,6 +58,20 @@ class DashboardPayloadTests(unittest.TestCase):
         self.assertGreater(warehouse["total_gold_rows"], 100000)
         self.assertGreater(warehouse["cross_source"]["paired_days"], 1000)
 
+    def test_payload_extends_history_past_paqi_with_separate_source_series(self) -> None:
+        payload = dashboard.build_dashboard_payload(self.root, now=self.now)
+        paqi_end = payload["historical"]["series"][-1]["date"]
+        others = {item["source_id"]: item for item in payload["historical"]["other_series"]}
+        self.assertEqual(set(others), {"us_consulate_karachi_pm25", "urban_unit_karachi_network"})
+        consulate = others["us_consulate_karachi_pm25"]["points"]
+        self.assertTrue(all(point["value"] is None for point in consulate if point["quality_flag"] == "insufficient_valid_hours"))
+        network_end = others["urban_unit_karachi_network"]["points"][-1]["date"]
+        self.assertGreater(network_end, paqi_end)
+        latest = payload["overview"]["latest_any_source"]
+        self.assertEqual(latest["date"], network_end)
+        self.assertIn("Urban Unit", latest["source"])
+        self.assertEqual(payload["overview"]["freshness"]["last_observation_date"], paqi_end)
+
     def test_payload_forecast_has_validation_and_held_out_test_provenance(self) -> None:
         payload = dashboard.build_dashboard_payload(self.root, now=self.now)
         validation = payload["forecast"]["validation"]

@@ -147,7 +147,14 @@ function setStatusBadge(node, status) {
   if (String(status).includes("fail")) node.classList.add("status-failure");
 }
 
-function renderChart(series, unit) {
+const DAY_MS = 86400000;
+const dayNumber = (isoDate) => Math.round(Date.parse(`${isoDate}T00:00:00Z`) / DAY_MS);
+const OTHER_SERIES_CLASS = {
+  us_consulate_karachi_pm25: "chart-series-consulate",
+  urban_unit_karachi_network: "chart-series-network",
+};
+
+function renderChart(series, unit, otherSeries = []) {
   const wrap = document.getElementById("chart-wrap");
   wrap.replaceChildren();
   wrap.setAttribute("aria-busy", "false");
@@ -160,23 +167,31 @@ function renderChart(series, unit) {
   const margin = { top: 15, right: 18, bottom: 38, left: 58 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
-  const numeric = series.filter((row) => typeof row.value === "number");
+  const others = (Array.isArray(otherSeries) ? otherSeries : []).filter(
+    (item) => Array.isArray(item.points) && item.points.length,
+  );
+  const allPoints = series.concat(...others.map((item) => item.points));
+  const numeric = allPoints.filter((row) => typeof row.value === "number");
   if (!numeric.length) {
     wrap.append(element("p", "muted", "No numeric observations are available to plot."));
     return;
   }
   const maxValue = Math.ceil(Math.max(...numeric.map((row) => row.value)) / 50) * 50;
-  const xAt = (index) => margin.left + (index / Math.max(series.length - 1, 1)) * plotWidth;
+  const firstDate = allPoints.reduce((min, row) => (row.date < min ? row.date : min), allPoints[0].date);
+  const lastDate = allPoints.reduce((max, row) => (row.date > max ? row.date : max), allPoints[0].date);
+  const firstDay = dayNumber(firstDate);
+  const span = Math.max(dayNumber(lastDate) - firstDay, 1);
+  const xAt = (isoDate) => margin.left + ((dayNumber(isoDate) - firstDay) / span) * plotWidth;
   const yAt = (value) => margin.top + (1 - value / maxValue) * plotHeight;
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.setAttribute("role", "img");
   svg.setAttribute(
     "aria-label",
-    `Daily historical PM2.5 series from ${series[0].date} to ${series[series.length - 1].date}, in ${unit}. Missing readings are shown as gaps.`,
+    `Daily PM2.5 from ${firstDate} to ${lastDate}, in ${unit}, one line per source. Missing readings are shown as gaps.`,
   );
   const description = document.createElementNS("http://www.w3.org/2000/svg", "title");
-  description.textContent = `Historical daily PM2.5 readings, ${series[0].date} to ${series[series.length - 1].date}; missing records are not interpolated.`;
+  description.textContent = `Daily PM2.5 readings, ${firstDate} to ${lastDate}; sources are drawn separately and missing records are not interpolated.`;
   svg.append(description);
 
   // Create tooltip element
@@ -211,29 +226,65 @@ function renderChart(series, unit) {
     label.textContent = number(value, 0);
     svg.append(label);
   }
-  const segments = [];
-  let segment = [];
-  series.forEach((row, index) => {
-    if (typeof row.value === "number") {
-      segment.push(`${xAt(index).toFixed(2)},${yAt(row.value).toFixed(2)}`);
-    } else if (segment.length) {
-      segments.push(segment);
+  const drawLine = (points, className) => {
+    let segment = [];
+    let previousDay = null;
+    const flush = () => {
+      if (segment.length >= 2) {
+        const path = document.createElementNS(svg.namespaceURI, "polyline");
+        path.setAttribute("points", segment.join(" "));
+        path.setAttribute("class", className);
+        svg.append(path);
+      }
       segment = [];
-    }
-  });
-  if (segment.length) segments.push(segment);
-  for (const points of segments) {
-    if (points.length < 2) continue;
-    const path = document.createElementNS(svg.namespaceURI, "polyline");
-    path.setAttribute("points", points.join(" "));
-    path.setAttribute("class", "chart-series");
-    svg.append(path);
+    };
+    points.forEach((row) => {
+      const day = dayNumber(row.date);
+      if (typeof row.value !== "number" || (previousDay !== null && day - previousDay > 1)) flush();
+      if (typeof row.value === "number") segment.push(`${xAt(row.date).toFixed(2)},${yAt(row.value).toFixed(2)}`);
+      previousDay = day;
+    });
+    flush();
+  };
+  for (const item of others) {
+    drawLine(item.points, `chart-series ${OTHER_SERIES_CLASS[item.source_id] || "chart-series-other"}`);
   }
-  
+  drawLine(series, "chart-series");
+
+  const showTooltip = (event, lines) => {
+    const rect = wrap.getBoundingClientRect();
+    if (lines) {
+      tooltip.replaceChildren();
+      lines.forEach((line, index) => {
+        if (index) tooltip.append(document.createElement("br"));
+        tooltip.append(index === 0 ? element("strong", "", line) : document.createTextNode(line));
+      });
+    }
+    tooltip.style.display = "block";
+    tooltip.style.left = (event.clientX - rect.left + 15) + "px";
+    tooltip.style.top = (event.clientY - rect.top - 15) + "px";
+  };
+  for (const item of others) {
+    item.points.forEach((row) => {
+      if (typeof row.value !== "number") return;
+      const circle = document.createElementNS(svg.namespaceURI, "circle");
+      circle.setAttribute("cx", xAt(row.date));
+      circle.setAttribute("cy", yAt(row.value));
+      circle.setAttribute("r", "2.5");
+      circle.setAttribute("class", `chart-point-other ${OTHER_SERIES_CLASS[item.source_id] || "chart-series-other"}`);
+      circle.addEventListener("mouseenter", (event) =>
+        showTooltip(event, [row.date, `PM2.5: ${number(row.value, 1)} µg/m³`, item.label]),
+      );
+      circle.addEventListener("mousemove", (event) => showTooltip(event, null));
+      circle.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+      svg.append(circle);
+    });
+  }
+
   // Add interactive points with tooltips
-  series.forEach((row, index) => {
+  series.forEach((row) => {
     if (typeof row.value !== "number") return;
-    const x = xAt(index);
+    const x = xAt(row.date);
     const y = yAt(row.value);
     const circle = document.createElementNS(svg.namespaceURI, "circle");
     circle.setAttribute("cx", x);
@@ -282,9 +333,9 @@ function renderChart(series, unit) {
     svg.append(circle);
   });
   
-  series.forEach((row, index) => {
+  series.forEach((row) => {
     if (row.value !== null) return;
-    const x = xAt(index);
+    const x = xAt(row.date);
     const marker = document.createElementNS(svg.namespaceURI, "line");
     marker.setAttribute("x1", x);
     marker.setAttribute("x2", x);
@@ -300,11 +351,10 @@ function renderChart(series, unit) {
     svg.append(marker);
   });
   const yearLabels = [];
-  series.forEach((row, index) => {
-    if (index === 0 || row.date.slice(0, 4) !== series[index - 1].date.slice(0, 4)) {
-      yearLabels.push({ year: row.date.slice(0, 4), x: xAt(index) });
-    }
-  });
+  for (let year = Number(firstDate.slice(0, 4)); year <= Number(lastDate.slice(0, 4)); year += 1) {
+    const start = `${year}-01-01` < firstDate ? firstDate : `${year}-01-01`;
+    yearLabels.push({ year: String(year), x: xAt(start) });
+  }
   const maxLabels = 9;
   const stride = Math.max(1, Math.ceil(yearLabels.length / maxLabels));
   yearLabels.filter((_, index) => index % stride === 0 || index === yearLabels.length - 1).forEach(({ year, x }) => {
@@ -317,6 +367,15 @@ function renderChart(series, unit) {
     svg.append(label);
   });
   wrap.append(svg);
+  const legend = element("div", "chart-legend");
+  const legendItem = (className, label) => {
+    const item = element("span", "chart-legend-item");
+    item.append(element("span", `chart-legend-swatch ${className}`), document.createTextNode(label));
+    legend.append(item);
+  };
+  legendItem("chart-series-paqi", "PAQI Karachi daily (published, ends " + series[series.length - 1].date + ")");
+  for (const item of others) legendItem(OTHER_SERIES_CLASS[item.source_id] || "chart-series-other", item.label);
+  wrap.append(legend);
 }
 
 function renderYearTable(rows) {
@@ -552,17 +611,22 @@ function renderDashboard(data) {
   text("dated-count", integer(overview.dated_records));
   text("numeric-count", integer(overview.numeric_readings));
   text("missing-count", integer(overview.missing_readings));
-  text("last-observation", overview.freshness.last_observation_date);
   const freshness = overview.freshness;
+  const latest = overview.latest_any_source;
+  text("last-observation", latest ? latest.date : freshness.last_observation_date);
   text(
     "freshness-label",
-    `Historical last observation ${freshness.last_observation_date} · ${integer(freshness.age_days)} days old. Live sensors are a separate feed below.`,
+    latest
+      ? `Newest daily reading ${latest.date} (${latest.source}, ${integer(latest.age_days)} days old). The published PAQI series ends ${freshness.last_observation_date}.`
+      : `Historical last observation ${freshness.last_observation_date} · ${integer(freshness.age_days)} days old. Live sensors are a separate feed below.`,
   );
   text(
     "stale-detail",
-    freshness.is_stale
-      ? `Historical series exceeds the ${freshness.warning_threshold_days}-day warning threshold.`
-      : `Historical series within the ${freshness.warning_threshold_days}-day warning threshold.`,
+    latest
+      ? `${latest.source}. PAQI published file ends ${freshness.last_observation_date}.`
+      : freshness.is_stale
+        ? `Historical series exceeds the ${freshness.warning_threshold_days}-day warning threshold.`
+        : `Historical series within the ${freshness.warning_threshold_days}-day warning threshold.`,
   );
   const pipeline = overview.pipeline;
   setStatusBadge(document.getElementById("pipeline-badge"), pipeline.latest_status);
@@ -576,9 +640,11 @@ function renderDashboard(data) {
   text("run-detail", `${pipeline.success_history_note} Latest run ID: ${pipeline.latest_run_id || "unavailable"}.`);
   
   // Render health widget with latest PM2.5
-  const latestPM25 = data.historical.series.length > 0 
-    ? data.historical.series[data.historical.series.length - 1].value 
-    : null;
+  const latestPM25 = latest
+    ? latest.value
+    : data.historical.series.length > 0
+      ? data.historical.series[data.historical.series.length - 1].value
+      : null;
   renderHealthWidget(latestPM25);
   
   // Render stats cards and heatmap
@@ -586,11 +652,15 @@ function renderDashboard(data) {
   renderCalendarHeatmap(data.historical.series);
   
   renderLive(data.live || { status: "unavailable", sensors: [] });
-  renderChart(data.historical.series, data.historical.unit);
+  const otherSeries = data.historical.other_series || [];
+  renderChart(data.historical.series, data.historical.unit, otherSeries);
   const missingDates = data.historical.missing_dates || [];
+  const otherCounts = otherSeries
+    .map((item) => `${item.points.filter((point) => typeof point.value === "number").length.toLocaleString()} ${item.label.split(" (")[0]}`)
+    .join(" · ");
   text(
     "chart-caption",
-    `${data.historical.series.length.toLocaleString()} daily records · ${missingDates.length} blank readings shown as gaps${missingDates.length ? ` (${missingDates.join(", ")})` : ""}.`,
+    `${data.historical.series.length.toLocaleString()} PAQI daily records · ${missingDates.length} blank PAQI readings shown as gaps${missingDates.length ? ` (${missingDates.join(", ")})` : ""}${otherCounts ? ` · ${otherCounts} daily values` : ""}. Days that fail a source's completeness rule are left as gaps.`,
   );
   renderYearTable(data.historical.yearly_summary || []);
   renderQuality(data.quality);
