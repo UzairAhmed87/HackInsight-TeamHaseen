@@ -35,7 +35,7 @@ cd hackinsight-air-quality-pakistan
 cp /workspace/README_HF.md README.md
 
 # Copy Gradio app wrapper
-cp /workspace/app_gradio.py app_gradio.py
+cp /workspace/app.py app.py
 
 # Copy requirements
 cp /workspace/requirements.txt .
@@ -194,6 +194,8 @@ huggingface-cli login
 ## 🎨 Customize the Interface
 
 Edit `app_gradio.py` to customize:
+
+Edit `app.py` to customize:
 
 ### Change Theme
 ```python

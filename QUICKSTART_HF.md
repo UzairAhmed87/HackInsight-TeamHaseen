@@ -21,7 +21,7 @@ cd hackinsight-air-quality-pakistan
 
 # Copy files from workspace
 cp /workspace/README_HF.md README.md
-cp /workspace/app_gradio.py app_gradio.py
+cp /workspace/app.py app.py
 cp /workspace/requirements.txt .
 cp -r /workspace/pipeline .
 cp -r /workspace/config .
