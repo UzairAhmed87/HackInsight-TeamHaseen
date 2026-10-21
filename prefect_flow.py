@@ -1,193 +1,146 @@
+"""Hourly Prefect flow: rebuild the warehouse, run the Data Quality Agent, re-evaluate the model.
+
+Every flow run, successful or failed, is appended to ``prefect_runs.csv`` by Prefect state hooks.
+The file is written only by this flow; do not edit it by hand.
+
+Run locally:      python prefect_flow.py
+Hourly schedule:  .github/workflows/hourly-pipeline.yml (GitHub Actions cron) runs this flow.
 """
-Prefect Flow for HackInsight Air Quality Pipeline
-Runs data acquisition, quality checks, and model evaluation hourly
-"""
-import sys
-from pathlib import Path
-from datetime import datetime, timedelta
-import subprocess
+from __future__ import annotations
+
+import csv
 import json
-from prefect import flow, task
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
-@task(name="fetch_and_validate_data", retries=2, retry_delay_seconds=30)
-def fetch_and_validate_data():
-    """Fetch data from sources and validate"""
-    print("🔄 Running data pipeline...")
-    result = subprocess.run(
-        [sys.executable, "-m", "pipeline.run"],
-        capture_output=True,
-        text=True,
-        cwd=Path(__file__).parent
+from prefect import flow, get_run_logger, task
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+
+from pipeline import forecasting  # noqa: E402
+from pipeline import run as warehouse  # noqa: E402
+
+RUNS_LOG = ROOT / "prefect_runs.csv"
+EXECUTION_STATUS = ROOT / "data" / "reports" / "execution_status.json"
+QUALITY_REPORT = ROOT / "data" / "quality" / "quality_report.json"
+FORECAST_METRICS = ROOT / "data" / "reports" / "forecast_metrics.json"
+
+RUN_FIELDS = [
+    "flow_run_id",
+    "flow_run_name",
+    "state",
+    "started_at_utc",
+    "finished_at_utc",
+    "duration_seconds",
+    "pipeline_run_id",
+    "pipeline_status",
+    "quality_status",
+    "dq_checks_passed",
+    "dq_checks_warning",
+    "dq_checks_failed",
+    "gold_rows",
+    "latest_observation_date",
+    "test_mae_linear",
+    "test_mae_persistence",
+    "message",
+]
+
+
+class PipelineRunFailed(RuntimeError):
+    """Raised when a pipeline stage exits nonzero so Prefect marks the run Failed."""
+
+
+def _utc(value: datetime | None) -> str:
+    if value is None:
+        return ""
+    return value.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+@task(name="build-warehouse-and-quality-agent", retries=2, retry_delay_seconds=60)
+def build_warehouse() -> dict[str, Any]:
+    logger = get_run_logger()
+    code, status = warehouse.run_pipeline()
+    logger.info("Warehouse run %s finished with status %s", status.get("run_id"), status.get("status"))
+    if code != 0:
+        raise PipelineRunFailed(f"make data failed: {status.get('errors')}")
+    return status
+
+
+@task(name="evaluate-forecast-model")
+def evaluate_model() -> dict[str, Any]:
+    logger = get_run_logger()
+    if forecasting.main() != 0:
+        raise PipelineRunFailed("Forecast evaluation failed.")
+    metrics = _read_json(FORECAST_METRICS)
+    test = metrics.get("splits", {}).get("test", {})
+    logger.info(
+        "Test MAE linear=%s persistence=%s",
+        test.get("linear_model", {}).get("mae"),
+        test.get("persistence_on_model_matched_targets", {}).get("mae"),
     )
-    
-    if result.returncode != 0:
-        print(f"❌ Pipeline failed: {result.stderr}")
-        raise Exception(f"Data pipeline failed: {result.stderr}")
-    
-    print(f"✅ Pipeline completed successfully")
-    
-    # Parse execution status
-    status_file = Path("data/reports/execution_status.json")
-    if status_file.exists():
-        with open(status_file) as f:
-            status = json.load(f)
-        return status
-    return None
+    return metrics
 
-@task(name="check_data_quality")
-def check_data_quality(status):
-    """Verify data quality meets thresholds"""
-    print("🔍 Checking data quality...")
-    
-    if not status:
-        raise Exception("No status available")
-    
-    # Check quality metrics
-    quality_status = status.get("quality_status", "unknown")
-    if quality_status == "failed":
-        raise Exception("Data quality checks failed")
-    
-    # Read quality report
-    quality_file = Path("data/quality/quality_report.json")
-    if quality_file.exists():
-        with open(quality_file) as f:
-            quality = json.load(f)
-        
-        failed_checks = quality.get("counts", {}).get("failed_checks", 0)
-        if failed_checks > 0:
-            print(f"⚠️  {failed_checks} quality checks failed")
-        else:
-            print(f"✅ All quality checks passed")
-        
-        return quality
-    
-    return None
 
-@task(name="run_forecasting")
-def run_forecasting():
-    """Run forecasting model and evaluation"""
-    print("📊 Running forecasting model...")
-    result = subprocess.run(
-        [sys.executable, "-m", "pipeline.forecasting"],
-        capture_output=True,
-        text=True,
-        cwd=Path(__file__).parent
-    )
-    
-    if result.returncode != 0:
-        print(f"⚠️  Forecasting warning: {result.stderr}")
-        # Don't fail on forecasting errors
-        return None
-    
-    print("✅ Forecasting completed")
-    
-    # Parse forecast metrics
-    metrics_file = Path("data/reports/forecast_metrics.json")
-    if metrics_file.exists():
-        with open(metrics_file) as f:
-            metrics = json.load(f)
-        return metrics
-    
-    return None
+def _record_run(flow_obj: Any, flow_run: Any, state: Any) -> None:
+    execution = _read_json(EXECUTION_STATUS)
+    quality = _read_json(QUALITY_REPORT)
+    counts = quality.get("data_quality_agent", {}).get("counts", {})
+    test = _read_json(FORECAST_METRICS).get("splits", {}).get("test", {})
+    started = flow_run.start_time
+    finished = datetime.now(timezone.utc)
+    row = {
+        "flow_run_id": str(flow_run.id),
+        "flow_run_name": flow_run.name,
+        "state": state.name,
+        "started_at_utc": _utc(started),
+        "finished_at_utc": _utc(finished),
+        "duration_seconds": round((finished - started).total_seconds(), 2) if started else "",
+        "pipeline_run_id": execution.get("run_id", ""),
+        "pipeline_status": execution.get("status", ""),
+        "quality_status": quality.get("quality_status", ""),
+        "dq_checks_passed": counts.get("passed_checks", ""),
+        "dq_checks_warning": counts.get("warning_checks", ""),
+        "dq_checks_failed": counts.get("failed_checks", ""),
+        "gold_rows": quality.get("gold_record_count", ""),
+        "latest_observation_date": quality.get("last_observation_date", ""),
+        "test_mae_linear": test.get("linear_model", {}).get("mae", ""),
+        "test_mae_persistence": test.get("persistence_on_model_matched_targets", {}).get("mae", ""),
+        "message": (state.message or "")[:300],
+    }
+    new_file = not RUNS_LOG.exists() or RUNS_LOG.stat().st_size == 0
+    with RUNS_LOG.open("a", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=RUN_FIELDS)
+        if new_file:
+            writer.writeheader()
+        writer.writerow(row)
 
-@task(name="log_run_results")
-def log_run_results(status, quality, forecast):
-    """Log pipeline run results to CSV"""
-    import csv
-    from datetime import datetime
-    
-    log_file = Path("prefect_runs.csv")
-    
-    # Create file with headers if it doesn't exist
-    if not log_file.exists():
-        with open(log_file, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                'timestamp',
-                'run_id',
-                'status',
-                'records_processed',
-                'quality_status',
-                'failed_checks',
-                'warnings',
-                'forecast_mae',
-                'duration_seconds'
-            ])
-    
-    # Append run data
-    with open(log_file, 'a', newline='') as f:
-        writer = csv.writer(f)
-        
-        timestamp = datetime.utcnow().isoformat() + 'Z'
-        run_id = status.get('run_id', 'unknown') if status else 'unknown'
-        status_str = status.get('status', 'unknown') if status else 'unknown'
-        records = status.get('gold_record_count', 0) if status else 0
-        
-        quality_status = quality.get('pipeline_status', 'unknown') if quality else 'unknown'
-        failed = quality.get('counts', {}).get('failed_checks', 0) if quality else 0
-        warnings = quality.get('counts', {}).get('warning_checks', 0) if quality else 0
-        
-        mae = None
-        if forecast and 'test' in forecast:
-            mae = forecast['test'].get('linear_model', {}).get('mae')
-        
-        # Calculate duration (mock for now)
-        duration = 0
-        if status:
-            start = datetime.fromisoformat(status.get('started_at_utc', '').replace('Z', ''))
-            end = datetime.fromisoformat(status.get('finished_at_utc', '').replace('Z', ''))
-            duration = (end - start).total_seconds()
-        
-        writer.writerow([
-            timestamp,
-            run_id,
-            status_str,
-            records,
-            quality_status,
-            failed,
-            warnings,
-            mae,
-            duration
-        ])
-    
-    print(f"✅ Logged run results to {log_file}")
-    return str(log_file)
 
 @flow(
-    name="hackinsight-pipeline",
-    description="Hourly air quality data pipeline with quality checks and forecasting"
+    name="hackinsight-hourly-pipeline",
+    description="Rebuild raw/cleaned/gold layers, run the Data Quality Agent and re-evaluate the forecast.",
+    on_completion=[_record_run],
+    on_failure=[_record_run],
+    on_crashed=[_record_run],
 )
-def hackinsight_pipeline():
-    """Main pipeline flow"""
-    print("=" * 60)
-    print("🚀 Starting HackInsight Air Quality Pipeline")
-    print(f"⏰ Timestamp: {datetime.utcnow().isoformat()}Z")
-    print("=" * 60)
-    
-    # Step 1: Fetch and validate data
-    status = fetch_and_validate_data()
-    
-    # Step 2: Check data quality
-    quality = check_data_quality(status)
-    
-    # Step 3: Run forecasting
-    forecast = run_forecasting()
-    
-    # Step 4: Log results
-    log_file = log_run_results(status, quality, forecast)
-    
-    print("=" * 60)
-    print("✅ Pipeline completed successfully!")
-    print(f"📝 Results logged to: {log_file}")
-    print("=" * 60)
-    
-    return {
-        "status": "success",
-        "timestamp": datetime.utcnow().isoformat() + 'Z',
-        "log_file": log_file
-    }
+def hackinsight_pipeline() -> dict[str, Any]:
+    status = build_warehouse()
+    metrics = evaluate_model()
+    return {"pipeline_status": status.get("status"), "test": metrics.get("splits", {}).get("test", {}).get("dates")}
+
 
 if __name__ == "__main__":
-    # Run the flow
-    result = hackinsight_pipeline()
-    print(f"\n✅ Flow completed: {result}")
+    try:
+        hackinsight_pipeline()
+    except Exception as exc:  # noqa: BLE001 - flow state is recorded by hooks; exit nonzero for the scheduler
+        print(f"Flow failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+        sys.exit(1)

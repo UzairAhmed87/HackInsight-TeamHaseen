@@ -1,0 +1,4 @@
+# Orchestration only. The pipeline itself uses the Python standard library.
+prefect==3.8.8
+# prefect 3.8.8's bundled server uses Body(min_items=...), removed in fastapi 0.155.
+fastapi<0.155

@@ -2,104 +2,80 @@ name: Hourly Data Pipeline
 
 on:
   schedule:
-    # Run every hour at minute 0
-    - cron: '0 * * * *'
-  workflow_dispatch: # Allow manual trigger
-  push:
-    branches:
-      - main
-    paths:
-      - 'pipeline/**'
-      - 'run_pipeline.py'
-      - '.github/workflows/hourly-pipeline.yml'
+    - cron: "7 * * * *"
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hourly-pipeline-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 30
+    env:
+      OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+      # Optional: set both secrets to also record runs in a Prefect Cloud workspace.
+      PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
+      PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
-          fetch-depth: 0 # Full history for git operations
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-pipeline.txt
+
+      - name: Restore immutable raw source files
+        uses: actions/cache@v4
         with:
-          python-version: '3.12'
-      
-      - name: Run data pipeline
-        id: pipeline
-        run: |
-          echo "🚀 Starting hourly pipeline run..."
-          python3 run_pipeline.py
-          echo "✅ Pipeline completed"
+          path: data/raw
+          key: raw-${{ hashFiles('config/sources.json') }}-${{ github.run_id }}
+          restore-keys: raw-${{ hashFiles('config/sources.json') }}-
+
+      - name: Install orchestration dependencies
+        run: pip install -r requirements-pipeline.txt
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests
+
+      - name: Run Prefect flow
+        id: flow
+        run: python prefect_flow.py
         continue-on-error: true
-      
-      - name: Check pipeline status
+
+      - name: Commit run log and refreshed artifacts
+        if: github.event_name != 'pull_request'
         run: |
-          if [ -f "data/quality/quality_report.json" ]; then
-            echo "✅ Quality report generated"
-            cat data/quality/quality_report.json | python3 -m json.tool | head -20
-          else
-            echo "⚠️ Quality report not found"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add prefect_runs.csv data/processed data/quality/quality_report.json data/reports
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
           fi
-          
-          if [ -f "prefect_runs.csv" ]; then
-            echo "✅ Pipeline runs log exists"
-            echo "📊 Last 5 runs:"
-            tail -5 prefect_runs.csv
-          else
-            echo "⚠️ No pipeline runs log"
-          fi
-      
-      - name: Commit pipeline results
+          git commit -m "Hourly pipeline run $(date -u +%Y-%m-%dT%H:%MZ) [${{ steps.flow.outcome }}]"
+          for attempt in 1 2 3; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            sleep $((attempt * 10))
+          done
+          exit 1
+
+      - name: Run summary
+        if: always()
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "GitHub Actions Bot"
-          
-          # Stage pipeline outputs
-          git add prefect_runs.csv || true
-          git add data/quality/quality_report.json || true
-          git add data/reports/execution_status.json || true
-          git add data/reports/forecast_metrics.json || true
-          git add data/reports/forecast_predictions.csv || true
-          git add data/processed/gold_air_quality.csv || true
-          
-          # Commit if changes exist
-          if ! git diff --staged --quiet; then
-            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-            git commit -m "⏰ Automated pipeline run: $TIMESTAMP"
-            echo "✅ Changes committed"
-          else
-            echo "ℹ️ No changes to commit"
-          fi
-      
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
-      
-      - name: Pipeline Summary
-        run: |
-          echo "## 📊 Pipeline Run Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ -f "prefect_runs.csv" ]; then
-            echo "### Latest Runs" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -5 prefect_runs.csv >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ -f "data/quality/quality_report.json" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Quality Status" >> $GITHUB_STEP_SUMMARY
-            echo '```json' >> $GITHUB_STEP_SUMMARY
-            cat data/quality/quality_report.json | python3 -m json.tool | head -30 >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Hourly pipeline execution complete" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### Prefect flow: ${{ steps.flow.outcome }}"
+            echo '```'
+            tail -n 5 prefect_runs.csv 2>/dev/null || echo "prefect_runs.csv not written"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail job if the flow failed
+        if: steps.flow.outcome == 'failure'
+        run: exit 1
