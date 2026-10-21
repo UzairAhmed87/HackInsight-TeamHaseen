@@ -22,6 +22,13 @@ class LlmExplainerGuardrailTests(unittest.TestCase):
         with patch.dict(os.environ, NO_KEYS):
             self.assertEqual(llm_explainer.explain(self.forecast), {"used": False, "reason": "not_configured"})
 
+    def test_non_evidence_tags_are_removed(self) -> None:
+        text = f"The average error was {self.model['mae']:.2f} [E1] [LIMITATIONS]."
+        out = llm_explainer.explain(self.forecast, call=lambda system, user: text)
+        self.assertTrue(out["used"], out)
+        self.assertNotIn("LIMITATIONS", out["text"])
+        self.assertIn("[E1]", out["text"])
+
     def test_faithful_paraphrase_is_accepted(self) -> None:
         text = (
             f"On held-out days the model's average error was {self.model['mae']:.2f} µg/m³ of PM2.5, "
@@ -45,6 +52,12 @@ class LlmExplainerGuardrailTests(unittest.TestCase):
             self.unknown, call=lambda s, u: f"{insight_agent.ABSTENTION} The data only covers air quality."
         )
         self.assertTrue(good["used"], good)
+        urdu = llm_explainer.explain(
+            self.unknown,
+            language="ur",
+            call=lambda s, u: f"{insight_agent.ABSTENTION_UR} یہ سوال ہوا کے اعداد و شمار میں نہیں ہے۔",
+        )
+        self.assertTrue(urdu["used"], urdu)
 
     def test_citations_must_exist(self) -> None:
         count = len(self.forecast["evidence"])

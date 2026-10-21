@@ -6,7 +6,7 @@ is used instead, if it contains any number not present in that evidence, drops a
 cites evidence that does not exist, or is too long.
 
 Configure with environment variables (any OpenAI-compatible chat-completions endpoint):
-  GEMINI_API_KEY                 uses Google's OpenAI-compatible endpoint and gemini-2.5-flash
+  GEMINI_API_KEY                 uses Google's OpenAI-compatible endpoint and gemini-3.5-flash-lite
   GROQ_API_KEY                   uses Groq and llama-3.3-70b-versatile
   LLM_API_KEY, LLM_API_BASE, LLM_MODEL   any other provider
 Without a key, explain() returns {"used": False, "reason": "not_configured"} and nothing is sent anywhere.
@@ -20,28 +20,32 @@ import urllib.error
 import urllib.request
 from typing import Any, Callable
 
-from pipeline.insight_agent import ABSTENTION
+from pipeline.insight_agent import ABSTENTION, ABSTENTION_UR
 
 MAX_CHARS = 1400
 PROVIDERS = {
-    "GEMINI_API_KEY": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash"),
+    "GEMINI_API_KEY": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.5-flash-lite"),
     "GROQ_API_KEY": ("https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"),
 }
 LANGUAGES = {"en": "English", "ur": "Urdu (in Urdu script)"}
 NUMBER = re.compile(r"(?<![\w.])[-−]?\d[\d,]*(?:\.\d+)?")
 CITATION = re.compile(r"\[E(\d+)\]")
+EXTRA_TAG = re.compile(r"\[(?!E\d+\])[^\[\]]+\]")
 DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
 
-SYSTEM_PROMPT = """You explain verified air-quality findings to residents of Karachi, Pakistan.
+SYSTEM_PROMPT = """You explain verified air-quality findings to residents of Karachi, Pakistan, in everyday words.
 Rules you must follow:
 1. Use ONLY the facts in VERIFIED_ANSWER, EVIDENCE and LIMITATIONS. Do not add any number, date, place,
    cause, health effect or comparison that is not written there. Never estimate or round to new values.
-2. Cite every factual sentence with the evidence id(s) it comes from, like [E1] or [E1][E2].
-3. If STATUS is "abstained", begin with exactly: I don't know based on the available evidence.
-   Then explain briefly what the evidence can and cannot say. Do not guess.
+2. Cite every factual sentence with the evidence id(s) it comes from, like [E1] or [E1][E2]. No other tags.
+3. If STATUS is "abstained" and LANGUAGE is English, begin with exactly: I don't know based on the available evidence.
+   If STATUS is "abstained" and LANGUAGE is Urdu, begin with exactly: دستیاب شواہد کی بنیاد پر میں نہیں جانتا۔
+   Then say briefly what the evidence can and cannot say. Do not guess.
 4. Keep the most important limitation. Do not give medical advice.
 5. Write every number with Western digits 0-9, exactly as it appears in the evidence.
-6. At most 120 words. Plain language, no headings, no markdown lists."""
+6. At most 120 words. Short sentences, no headings, no markdown lists.
+7. When a fact uses a technical label (such as Pearson, MAE, RMSE, median or gold table), say what it means
+   for daily life in the same sentence, and keep the original number unchanged."""
 
 
 def _settings() -> tuple[str, str, str] | None:
@@ -88,6 +92,14 @@ def _allowed_numbers(result: dict[str, Any]) -> set[str]:
     return allowed
 
 
+def _present(text: str) -> str:
+    """Drop citation tags that are not evidence ids, so only [E1] style markers remain."""
+    cleaned = EXTRA_TAG.sub("", text).translate(DIGITS)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r" +([.,;:])", r"\1", cleaned)
+    return cleaned.strip()
+
+
 def validate(text: str, result: dict[str, Any]) -> list[str]:
     """Return the list of guardrail violations (empty means the text may be shown)."""
     problems = []
@@ -105,7 +117,7 @@ def validate(text: str, result: dict[str, Any]) -> list[str]:
         problems.append("no_citations")
     if any(index < 1 or index > evidence_count for index in cited):
         problems.append("citation_out_of_range")
-    if result.get("status") == "abstained" and ABSTENTION not in text:
+    if result.get("status") == "abstained" and ABSTENTION not in text and ABSTENTION_UR not in text:
         problems.append("missing_abstention")
     return problems
 
@@ -158,11 +170,22 @@ def explain(
     if call is None and settings is None:
         return {"used": False, "reason": "not_configured"}
     model = settings[2] if settings else "injected"
-    try:
-        text = (call or (lambda system, user: _call(settings, system, user, timeout)))(SYSTEM_PROMPT, _prompt(result, language))
-    except (urllib.error.URLError, TimeoutError, KeyError, IndexError, ValueError, OSError) as exc:
-        return {"used": False, "reason": f"provider_error:{type(exc).__name__}", "model": model}
-    violations = validate(text, result)
-    if violations:
-        return {"used": False, "reason": "rejected_by_guardrail", "violations": violations, "model": model}
-    return {"used": True, "text": text, "model": model, "language": language, "violations": []}
+    caller = call or (lambda system, user: _call(settings, system, user, timeout))
+    # A second try covers a slow or off-format reply. Injected test calls are not retried.
+    attempts = 1 if call is not None else 2
+    text = ""
+    violations: list[str] = []
+    last_error: Exception | None = None
+    for _attempt in range(attempts):
+        try:
+            text = _present(caller(SYSTEM_PROMPT, _prompt(result, language)))
+            last_error = None
+        except (urllib.error.URLError, TimeoutError, KeyError, IndexError, ValueError, OSError) as exc:
+            last_error = exc
+            continue
+        violations = validate(text, result)
+        if not violations:
+            return {"used": True, "text": text, "model": model, "language": language, "violations": []}
+    if last_error is not None and not text:
+        return {"used": False, "reason": f"provider_error:{type(last_error).__name__}", "model": model}
+    return {"used": False, "reason": "rejected_by_guardrail", "violations": violations, "model": model}
